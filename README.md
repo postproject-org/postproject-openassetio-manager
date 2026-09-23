@@ -19,6 +19,23 @@ OpenAssetIO entity, including an image sequence; its compact frame structure is
 reported with `ImageTrait` and `FrameRangedTrait`, while `LocatableContentTrait`
 points to the resolved sequence directory.
 
+## Install a release
+
+Download the PostProject native archive and Python wheel from the matching
+[PostProject release](https://github.com/eseifert/postproject/releases), then
+download this Manager wheel from the
+[Manager release](https://github.com/eseifert/postproject-openassetio-manager/releases).
+Install both wheels together so dependency resolution does not need a source
+checkout:
+
+```sh
+python -m pip install postproject-0.3.0a1-py3-none-any.whl \
+  postproject_openassetio_manager-0.1.0-py3-none-any.whl
+```
+
+Pass the extracted native library as `library_path` when initializing the
+Manager.
+
 ## Development
 
 Install PostProject's native package and Python wheel, then run:
