@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "17 4 * * 1"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+        with:
+          repository: eseifert/postproject
+          ref: main
+          path: postproject
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - uses: dtolnay/rust-toolchain@1.85.0
+      - run: cargo build --release --locked -p postproject-ffi
+        working-directory: postproject
+      - run: python -m pip install ./postproject/python . pytest
+      - run: pytest
+        env:
+          POSTPROJECT_LIBRARY: ${{ github.workspace }}/postproject/target/release/libpostproject.so
+
