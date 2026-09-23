@@ -1,0 +1,6 @@
+openassetio<2,>=1.0.2
+openassetio-mediacreation<2,>=1.0.0a13
+postproject<0.4,>=0.3.0a1
+
+[test]
+pytest<10,>=9

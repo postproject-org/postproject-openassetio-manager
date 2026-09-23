@@ -1,0 +1,12 @@
+LICENSE
+README.md
+pyproject.toml
+src/postproject_openassetio/__init__.py
+src/postproject_openassetio/manager.py
+src/postproject_openassetio_manager.egg-info/PKG-INFO
+src/postproject_openassetio_manager.egg-info/SOURCES.txt
+src/postproject_openassetio_manager.egg-info/dependency_links.txt
+src/postproject_openassetio_manager.egg-info/entry_points.txt
+src/postproject_openassetio_manager.egg-info/requires.txt
+src/postproject_openassetio_manager.egg-info/top_level.txt
+tests/test_manager.py

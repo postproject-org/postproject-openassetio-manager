@@ -1,0 +1,2 @@
+[openassetio.manager_plugin]
+postproject = postproject_openassetio
