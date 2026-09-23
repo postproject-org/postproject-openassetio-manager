@@ -17,5 +17,4 @@ class PostProjectManagerPlugin(PythonPluginSystemManagerPlugin):
         return PostProjectManagerInterface()
 
 
-plugin = PostProjectManagerPlugin
-
+openassetioPlugin = PostProjectManagerPlugin
