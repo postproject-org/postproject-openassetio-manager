@@ -22,9 +22,9 @@ points to the resolved sequence directory.
 ## Install a release
 
 Download the PostProject native archive and Python wheel from the matching
-[PostProject release](https://github.com/eseifert/postproject/releases), then
+[PostProject release](https://github.com/postproject-org/postproject/releases), then
 download this Manager wheel from the
-[Manager release](https://github.com/eseifert/postproject-openassetio-manager/releases).
+[Manager release](https://github.com/postproject-org/postproject-openassetio-manager/releases).
 Install both wheels together so dependency resolution does not need a source
 checkout:
 
