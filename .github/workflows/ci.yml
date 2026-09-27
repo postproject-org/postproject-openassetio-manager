@@ -5,16 +5,24 @@ on:
   pull_request:
   schedule:
     - cron: "17 4 * * 1"
+  workflow_call:
+    inputs:
+      postproject_ref:
+        required: false
+        type: string
+        default: main
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          repository: postproject-org/postproject-openassetio-manager
       - uses: actions/checkout@v7
         with:
           repository: postproject-org/postproject
-          ref: main
+          ref: ${{ inputs.postproject_ref || 'main' }}
           path: postproject
       - uses: actions/setup-python@v6
         with:
@@ -22,8 +30,16 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.85.0
       - run: cargo build --release --locked -p postproject-ffi
         working-directory: postproject
-      - run: python -m pip install ./postproject/python . pytest
-      - run: pytest
+      # Test the checked-out PostProject regardless of the declared version
+      # range, so a PostProject version bump cannot fail this compatibility run.
+      - name: Install against the checked-out PostProject
+        run: |
+          python -m pip install uv
+          echo "postproject @ file://$GITHUB_WORKSPACE/postproject/python" \
+            > "$RUNNER_TEMP/postproject-override.txt"
+          python -m uv pip install --system \
+            --override "$RUNNER_TEMP/postproject-override.txt" \
+            ./postproject/python . pytest
+      - run: pytest -W error
         env:
           POSTPROJECT_LIBRARY: ${{ github.workspace }}/postproject/target/release/libpostproject.so
-
