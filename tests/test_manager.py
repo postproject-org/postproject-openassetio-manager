@@ -56,6 +56,35 @@ def test_resolves_file_representation(tmp_path, native_library):
     assert LocatableContentTrait(data).getLocation() == media.resolve().as_uri()
 
 
+def test_resolves_media_added_after_initialization(tmp_path, native_library):
+    production_path = tmp_path / "production.pproj"
+    Production.create(production_path, library_path=native_library).close()
+    manager = create_manager(
+        {"production_path": str(production_path), "library_path": native_library}
+    )
+
+    media = tmp_path / "late.mov"
+    media.write_bytes(b"late media")
+    with Production.open(production_path, library_path=native_library) as production:
+        with production.transaction() as transaction:
+            asset_id = transaction.import_media(media, "Late")
+        representation = production.representations[asset_id][0]
+        references = [
+            production.host_bindings[representation.id],
+            production.host_bindings[representation.resources[0].id],
+        ]
+
+    context = manager.createContext()
+    for reference in references:
+        data = manager.resolve(
+            manager.createEntityReference(reference),
+            {LocatableContentTrait.kId},
+            ResolveAccess.kRead,
+            context,
+        )
+        assert LocatableContentTrait(data).getLocation() == media.resolve().as_uri()
+
+
 def test_image_sequence_remains_one_representation(tmp_path, native_library):
     sequence = tmp_path / "plates"
     sequence.mkdir()

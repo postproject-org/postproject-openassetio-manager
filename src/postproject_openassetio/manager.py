@@ -15,6 +15,7 @@ from openassetio_mediacreation.traits.twoDimensional import ImageTrait_v1
 from openassetio_mediacreation.traits.usage import EntityTrait_v1
 from postproject import (
     AssetId,
+    PostProjectError,
     Production,
     RepresentationId,
     ResourceId,
@@ -35,9 +36,6 @@ class PostProjectManagerInterface(ManagerInterface):
         super().__init__()
         self._production = None
         self._root_mappings = {}
-        self._assets = {}
-        self._representations = {}
-        self._resources = {}
 
     def identifier(self):
         return "org.postproject.manager"
@@ -65,7 +63,6 @@ class PostProjectManagerInterface(ManagerInterface):
             for key, value in managerSettings.items()
             if key.startswith("root.")
         }
-        self._index_production()
 
     def hasCapability(self, capability):
         return capability in (
@@ -97,7 +94,7 @@ class PostProjectManagerInterface(ManagerInterface):
             try:
                 self._lookup(reference.toString())
                 successCallback(index, True)
-            except (KeyError, ValueError):
+            except (PostProjectError, ValueError):
                 successCallback(index, False)
 
     def entityTraits(
@@ -116,7 +113,7 @@ class PostProjectManagerInterface(ManagerInterface):
             try:
                 target = self._lookup(reference.toString())
                 successCallback(index, self._traits_for(target))
-            except (KeyError, ValueError) as error:
+            except (PostProjectError, ValueError) as error:
                 errorCallback(index, self._resolution_error(reference, error))
 
     def resolve(
@@ -136,32 +133,31 @@ class PostProjectManagerInterface(ManagerInterface):
             try:
                 target = self._lookup(reference.toString())
                 successCallback(index, self._data_for(target, set(traitSet)))
-            except (KeyError, ValueError) as error:
+            except (PostProjectError, ValueError) as error:
                 errorCallback(index, self._resolution_error(reference, error))
 
-    def _index_production(self):
-        self._assets.clear()
-        self._representations.clear()
-        self._resources.clear()
-        for asset in self._production.assets:
-            self._assets[str(asset.id)] = asset
-            for representation in self._production.representations[asset.id]:
-                self._representations[str(representation.id)] = representation
-                for resource in representation.resources:
-                    self._resources[str(resource.id)] = (representation, resource)
-
     def _lookup(self, reference):
+        # Entities are read by identity on every call, so media committed by
+        # other processes after initialization is visible without re-indexing.
+        target = self._parse(reference)
+        if isinstance(target, AssetId):
+            return self._production.asset(target)
+        if isinstance(target, RepresentationId):
+            return self._production.representation(target)
+        if isinstance(target, ResourceId):
+            users = self._production.representations_using_resource(target, limit=2)
+            if len(users.items) != 1:
+                raise ValueError("resource is not used by exactly one representation")
+            representation = users.items[0]
+            resource = next(item for item in representation.resources if item.id == target)
+            return representation, resource
+        raise ValueError("object kind is not exposed as an OpenAssetIO media entity")
+
+    def _parse(self, reference):
         binding = self._production.host_bindings.parse(reference)
         if binding.production_id != self._production.id:
             raise ValueError("entity belongs to another production")
-        target = binding.object
-        if isinstance(target, AssetId):
-            return self._assets[str(target)]
-        if isinstance(target, RepresentationId):
-            return self._representations[str(target)]
-        if isinstance(target, ResourceId):
-            return self._resources[str(target)]
-        raise ValueError("object kind is not exposed as an OpenAssetIO media entity")
+        return binding.object
 
     @staticmethod
     def _resolvable_traits():
