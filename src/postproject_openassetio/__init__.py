@@ -4,7 +4,7 @@ from openassetio.pluginSystem import PythonPluginSystemManagerPlugin
 
 
 class PostProjectManagerPlugin(PythonPluginSystemManagerPlugin):
-    """Construct the read-only PostProject Manager interface."""
+    """Construct the PostProject Manager interface."""
 
     @staticmethod
     def identifier():

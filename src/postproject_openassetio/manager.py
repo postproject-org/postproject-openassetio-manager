@@ -1,9 +1,16 @@
-"""Read-only OpenAssetIO Manager backed by PostProject's public Python API."""
+"""OpenAssetIO Manager backed by PostProject's public Python API."""
 
+import time
+from importlib.metadata import PackageNotFoundError, version
 from urllib.parse import quote
 
-from openassetio import constants
-from openassetio.access import EntityTraitsAccess, PolicyAccess, ResolveAccess
+from openassetio import EntityReference, constants
+from openassetio.access import (
+    EntityTraitsAccess,
+    PolicyAccess,
+    PublishingAccess,
+    ResolveAccess,
+)
 from openassetio.errors import BatchElementError
 from openassetio.managerApi import ManagerInterface
 from openassetio.trait import TraitsData
@@ -14,11 +21,33 @@ from openassetio_mediacreation.traits.timeDomain import FrameRangedTrait_v1
 from openassetio_mediacreation.traits.twoDimensional import ImageCollectionTrait_v1
 from openassetio_mediacreation.traits.usage import EntityTrait_v1
 from postproject import (
+    ActivityEdge,
+    ActivitySpec,
     AssetId,
+    ImageSequenceInput,
+    JobId,
+    JobRequest,
+    JobState,
+    OriginIdentity,
     PostProjectError,
     Production,
     RepresentationId,
     ResourceId,
+    RevisionContext,
+    ToolIdentity,
+)
+
+from .publishing import (
+    MANAGER_VOCABULARY,
+    PUBLISH_KIND,
+    STRUCTURAL_PROPERTIES,
+    TRAIT_SET_PROPERTY,
+    PublishError,
+    content_from_traits,
+    persisted_metadata,
+    property_value,
+    representation_kind,
+    trait_set,
 )
 
 REFERENCE_PREFIX = "https://postproject.org/ref/v1/"
@@ -28,9 +57,14 @@ FrameRangedTrait = FrameRangedTrait_v1
 ImageCollectionTrait = ImageCollectionTrait_v1
 EntityTrait = EntityTrait_v1
 
+CLAIM_LEASE_MICROS = 60_000_000
+"""Lease of the claim that registration takes and completes in one commit."""
+
+REPOSITORY_URI = "https://github.com/postproject-org/postproject-openassetio-manager"
+
 
 class PostProjectManagerInterface(ManagerInterface):
-    """Resolve PostProject host bindings through OpenAssetIO."""
+    """Resolve and publish PostProject media through OpenAssetIO."""
 
     def __init__(self):
         super().__init__()
@@ -71,6 +105,7 @@ class PostProjectManagerInterface(ManagerInterface):
             ManagerInterface.Capability.kResolution,
             ManagerInterface.Capability.kEntityTraitIntrospection,
             ManagerInterface.Capability.kExistenceQueries,
+            ManagerInterface.Capability.kPublishing,
         )
 
     def managementPolicy(self, traitSets, policyAccess, context, hostSession):
@@ -81,6 +116,10 @@ class PostProjectManagerInterface(ManagerInterface):
                 ManagedTrait.imbueTo(result)
                 for trait_id in self._resolvable_traits() & set(requested):
                     result.addTrait(trait_id)
+            elif policyAccess == PolicyAccess.kWrite and LocatableContentTrait.kId in requested:
+                # Registration persists every trait and property verbatim.
+                ManagedTrait.imbueTo(result)
+                result.addTraits(set(requested))
             results.append(result)
         return results
 
@@ -106,8 +145,13 @@ class PostProjectManagerInterface(ManagerInterface):
         successCallback,
         errorCallback,
     ):
-        if entityTraitsAccess != EntityTraitsAccess.kRead:
-            self._reject_batch(entityReferences, errorCallback, "Entities are read-only")
+        if entityTraitsAccess == EntityTraitsAccess.kWrite:
+            for index, reference in enumerate(entityReferences):
+                try:
+                    self._publish_target(reference.toString())
+                    successCallback(index, {LocatableContentTrait.kId})
+                except PublishError as error:
+                    errorCallback(index, error.batch_error())
             return
         for index, reference in enumerate(entityReferences):
             try:
@@ -135,6 +179,147 @@ class PostProjectManagerInterface(ManagerInterface):
                 successCallback(index, self._data_for(target, set(traitSet)))
             except (PostProjectError, ValueError) as error:
                 errorCallback(index, self._resolution_error(reference, error))
+
+    def preflight(
+        self,
+        entityReferences,
+        traitsHints,
+        publishingAccess,
+        context,
+        hostSession,
+        successCallback,
+        errorCallback,
+    ):
+        for index, (reference, hints) in enumerate(zip(entityReferences, traitsHints)):
+            try:
+                self._require_write(publishingAccess)
+                target = self._publish_target(reference.toString())
+                if isinstance(target, JobId):
+                    # Preflighting a working reference again keeps it.
+                    successCallback(index, reference)
+                    continue
+                if not hints.hasTrait(LocatableContentTrait.kId):
+                    raise PublishError(
+                        BatchElementError.ErrorCode.kInvalidPreflightHint,
+                        "published media needs LocatableContentTrait",
+                    )
+                request = JobRequest(PUBLISH_KIND, (), target, representation_kind(hints))
+                with self._production.transaction() as transaction:
+                    transaction.set_revision_context(
+                        self._revision_context(f"Prepare publish to {reference.toString()}")
+                    )
+                    job_id = transaction.request_job(request)
+                successCallback(index, EntityReference(self._production.host_bindings[job_id]))
+            except PublishError as error:
+                errorCallback(index, error.batch_error())
+
+    def register(
+        self,
+        entityReferences,
+        entityTraitsDatas,
+        publishingAccess,
+        context,
+        hostSession,
+        successCallback,
+        errorCallback,
+    ):
+        for index, (reference, data) in enumerate(zip(entityReferences, entityTraitsDatas)):
+            try:
+                self._require_write(publishingAccess)
+                target = self._publish_target(reference.toString())
+                representation_id = self._register(target, data, hostSession)
+                successCallback(
+                    index, EntityReference(self._production.host_bindings[representation_id])
+                )
+            except PublishError as error:
+                errorCallback(index, error.batch_error())
+            except PostProjectError as error:
+                errorCallback(
+                    index,
+                    BatchElementError(
+                        BatchElementError.ErrorCode.kEntityAccessError,
+                        f"Entity '{reference.toString()}' cannot be registered: {error}",
+                    ),
+                )
+
+    def _register(self, target, data, hostSession):
+        content = content_from_traits(data)
+        if isinstance(target, JobId):
+            job = self._production.job(target)
+            job_id, asset_id, kind = job.id, job.output_asset_id, job.output_representation_kind
+        else:
+            job_id, asset_id, kind = None, target, representation_kind(data)
+        tool = ToolIdentity(hostSession.host().displayName())
+        now = time.time_ns() // 1_000
+        # The request (without preflight), claim, representation, persisted
+        # traits, activity, and completion become durable together or not at all.
+        with self._production.transaction() as transaction:
+            transaction.set_revision_context(self._revision_context("Register published media"))
+            if job_id is None:
+                job_id = transaction.request_job(JobRequest(PUBLISH_KIND, (), asset_id, kind))
+            claim_id = transaction.claim_job(job_id, tool, None, now, now + CLAIM_LEASE_MICROS)
+            if isinstance(content, ImageSequenceInput):
+                representation_id = transaction.add_image_sequence_representation(
+                    asset_id, kind, content
+                )
+            else:
+                representation_id = transaction.add_single_file_representation(
+                    asset_id, kind, content
+                )
+            for metadata_property, value in persisted_metadata(data):
+                transaction.add_metadata(representation_id, metadata_property, value)
+            activity_id = transaction.create_activity(
+                ActivitySpec(
+                    PUBLISH_KIND,
+                    (ActivityEdge(representation_id),),
+                    finished_at_unix_micros=now,
+                    tool=tool,
+                )
+            )
+            transaction.complete_job(job_id, claim_id, now, representation_id, activity_id)
+        return representation_id
+
+    def _publish_target(self, reference):
+        """Return the asset a new representation joins, or an open working job."""
+
+        try:
+            target = self._parse(reference)
+            if isinstance(target, AssetId):
+                return self._production.asset(target).id
+            if isinstance(target, RepresentationId):
+                # Representations are immutable facts: writing to one adds a
+                # new representation of its asset and leaves it untouched.
+                return self._production.representation(target).asset_id
+            if isinstance(target, JobId):
+                job = self._production.job(target)
+                if job.kind == PUBLISH_KIND and job.state == JobState.REQUESTED:
+                    return job.id
+        except (PostProjectError, ValueError) as error:
+            raise PublishError(
+                BatchElementError.ErrorCode.kEntityAccessError,
+                f"Entity '{reference}' cannot be published to: {error}",
+            ) from error
+        raise PublishError(
+            BatchElementError.ErrorCode.kEntityAccessError,
+            f"Entity '{reference}' is not an asset, representation, or open working reference",
+        )
+
+    @staticmethod
+    def _require_write(publishingAccess):
+        if publishingAccess != PublishingAccess.kWrite:
+            raise PublishError(
+                BatchElementError.ErrorCode.kEntityAccessError,
+                "Creating related entities is not supported",
+            )
+
+    @staticmethod
+    def _revision_context(message):
+        try:
+            manager_version = version("postproject-openassetio-manager")
+        except PackageNotFoundError:
+            manager_version = None
+        origin = OriginIdentity("PostProject OpenAssetIO Manager", manager_version, REPOSITORY_URI)
+        return RevisionContext(origin, message)
 
     def _lookup(self, reference):
         # Entities are read by identity on every call, so media committed by
@@ -169,8 +354,26 @@ class PostProjectManagerInterface(ManagerInterface):
             FrameRangedTrait.kId,
         }
 
+    def _persisted(self, target):
+        """Return registered trait properties as ``{trait: {key: value}}``."""
+
+        representation = target[0] if isinstance(target, tuple) else target
+        if not hasattr(representation, "resources"):
+            return {}
+        persisted = {}
+        for assertion in self._production.metadata[representation.id]:
+            vocabulary = assertion.property.vocabulary
+            if assertion.property == TRAIT_SET_PROPERTY:
+                for trait_id in trait_set(assertion.value):
+                    persisted.setdefault(trait_id, {})
+            elif vocabulary != MANAGER_VOCABULARY:
+                value = property_value(assertion.value)
+                if value is not None:
+                    persisted.setdefault(vocabulary, {})[assertion.property.property] = value
+        return persisted
+
     def _traits_for(self, target):
-        traits = {EntityTrait.kId}
+        traits = {EntityTrait.kId} | set(self._persisted(target))
         if hasattr(target, "display_name") and target.display_name:
             traits.add(DisplayNameTrait.kId)
         representation = target[0] if isinstance(target, tuple) else target
@@ -182,6 +385,12 @@ class PostProjectManagerInterface(ManagerInterface):
 
     def _data_for(self, target, requested):
         data = TraitsData()
+        for trait_id, properties in self._persisted(target).items():
+            if trait_id in requested:
+                data.addTrait(trait_id)
+                for key, value in properties.items():
+                    if (trait_id, key) not in STRUCTURAL_PROPERTIES:
+                        data.setTraitProperty(trait_id, key, value)
         if DisplayNameTrait.kId in requested and hasattr(target, "display_name"):
             if target.display_name:
                 DisplayNameTrait(data).setName(target.display_name)

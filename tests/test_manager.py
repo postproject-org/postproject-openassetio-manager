@@ -135,10 +135,3 @@ def test_image_sequence_remains_one_representation(tmp_path, native_library):
     assert location.getIsTemplated() is True
     assert FrameRangedTrait(data).getStartFrame() == 1001
     assert FrameRangedTrait(data).getEndFrame() == 1003
-
-
-def pytest_generate_tests(metafunc):
-    if "native_library" in metafunc.fixturenames:
-        import os
-
-        metafunc.parametrize("native_library", [os.environ["POSTPROJECT_LIBRARY"]])
