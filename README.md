@@ -31,8 +31,8 @@ Install both wheels together so dependency resolution does not need a source
 checkout:
 
 ```sh
-python -m pip install postproject-0.3.0a1-py3-none-any.whl \
-  postproject_openassetio_manager-0.1.0-py3-none-any.whl
+python -m pip install postproject-0.4.0a1-py3-none-any.whl \
+  postproject_openassetio_manager-0.2.0-py3-none-any.whl
 ```
 
 Pass the extracted native library as `library_path` when initializing the
