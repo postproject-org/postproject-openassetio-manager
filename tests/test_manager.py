@@ -7,12 +7,18 @@ from openassetio.hostApi import HostInterface, ManagerFactory
 from openassetio.log import ConsoleLogger
 from openassetio.pluginSystem import PythonPluginSystemManagerImplementationFactory
 from openassetio_mediacreation.traits.content import LocatableContentTrait_v1
+from openassetio_mediacreation.specifications.twoDimensional import (
+    BitmapImageResourceSequenceSpecification_v1,
+)
 from openassetio_mediacreation.traits.timeDomain import FrameRangedTrait_v1
+from openassetio_mediacreation.traits.twoDimensional import PixelBasedTrait_v1
 from postproject import ImageSequenceInput, Production, RepresentationKind
 
 
 LocatableContentTrait = LocatableContentTrait_v1
 FrameRangedTrait = FrameRangedTrait_v1
+PixelBasedTrait = PixelBasedTrait_v1
+BitmapImageResourceSequenceSpecification = BitmapImageResourceSequenceSpecification_v1
 
 
 class FixtureHost(HostInterface):
@@ -117,14 +123,16 @@ def test_image_sequence_remains_one_representation(tmp_path, native_library):
     context = manager.createContext()
     entity = manager.createEntityReference(reference)
     traits = manager.entityTraits(entity, EntityTraitsAccess.kRead, context)
-    assert FrameRangedTrait.kId in traits
+    assert BitmapImageResourceSequenceSpecification.kTraitSet - {PixelBasedTrait.kId} <= traits
     data = manager.resolve(
         entity,
         {LocatableContentTrait.kId, FrameRangedTrait.kId},
         ResolveAccess.kRead,
         context,
     )
-    assert LocatableContentTrait(data).getLocation() == sequence.resolve().as_uri()
+    location = LocatableContentTrait(data)
+    assert location.getLocation() == f"{sequence.resolve().as_uri()}/shot.%7Bframe%3A04d%7D.exr"
+    assert location.getIsTemplated() is True
     assert FrameRangedTrait(data).getStartFrame() == 1001
     assert FrameRangedTrait(data).getEndFrame() == 1003
 

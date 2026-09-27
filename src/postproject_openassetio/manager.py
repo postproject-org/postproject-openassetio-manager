@@ -1,6 +1,6 @@
 """Read-only OpenAssetIO Manager backed by PostProject's public Python API."""
 
-from pathlib import Path
+from urllib.parse import quote
 
 from openassetio import constants
 from openassetio.access import EntityTraitsAccess, PolicyAccess, ResolveAccess
@@ -11,7 +11,7 @@ from openassetio_mediacreation.traits.content import LocatableContentTrait_v1
 from openassetio_mediacreation.traits.identity import DisplayNameTrait_v1
 from openassetio_mediacreation.traits.managementPolicy import ManagedTrait
 from openassetio_mediacreation.traits.timeDomain import FrameRangedTrait_v1
-from openassetio_mediacreation.traits.twoDimensional import ImageTrait_v1
+from openassetio_mediacreation.traits.twoDimensional import ImageCollectionTrait_v1
 from openassetio_mediacreation.traits.usage import EntityTrait_v1
 from postproject import (
     AssetId,
@@ -25,7 +25,7 @@ REFERENCE_PREFIX = "https://postproject.org/ref/v1/"
 LocatableContentTrait = LocatableContentTrait_v1
 DisplayNameTrait = DisplayNameTrait_v1
 FrameRangedTrait = FrameRangedTrait_v1
-ImageTrait = ImageTrait_v1
+ImageCollectionTrait = ImageCollectionTrait_v1
 EntityTrait = EntityTrait_v1
 
 
@@ -165,7 +165,7 @@ class PostProjectManagerInterface(ManagerInterface):
             EntityTrait.kId,
             DisplayNameTrait.kId,
             LocatableContentTrait.kId,
-            ImageTrait.kId,
+            ImageCollectionTrait.kId,
             FrameRangedTrait.kId,
         }
 
@@ -177,7 +177,7 @@ class PostProjectManagerInterface(ManagerInterface):
         if hasattr(representation, "resources"):
             traits.add(LocatableContentTrait.kId)
             if representation.image_sequence is not None:
-                traits.update({ImageTrait.kId, FrameRangedTrait.kId})
+                traits.update({ImageCollectionTrait.kId, FrameRangedTrait.kId})
         return traits
 
     def _data_for(self, target, requested):
@@ -187,12 +187,17 @@ class PostProjectManagerInterface(ManagerInterface):
                 DisplayNameTrait(data).setName(target.display_name)
         representation = target[0] if isinstance(target, tuple) else target
         if hasattr(representation, "resources"):
-            if LocatableContentTrait.kId in requested:
-                LocatableContentTrait(data).setLocation(self._location_for(representation, target))
             sequence = representation.image_sequence
+            if LocatableContentTrait.kId in requested:
+                trait = LocatableContentTrait(data)
+                location = self._location_for(representation, target)
+                if sequence is not None:
+                    location = f"{location.rstrip('/')}/{quote(frame_template(sequence))}"
+                trait.setLocation(location)
+                trait.setIsTemplated(sequence is not None)
             if sequence is not None:
-                if ImageTrait.kId in requested:
-                    ImageTrait.imbueTo(data)
+                if ImageCollectionTrait.kId in requested:
+                    ImageCollectionTrait.imbueTo(data)
                 if FrameRangedTrait.kId in requested:
                     trait = FrameRangedTrait(data)
                     trait.setStartFrame(sequence.start)
@@ -230,3 +235,10 @@ class PostProjectManagerInterface(ManagerInterface):
             BatchElementError.ErrorCode.kEntityResolutionError,
             f"Entity '{reference.toString()}' cannot be resolved: {error}",
         )
+
+
+def frame_template(sequence):
+    """Return a sequence file name in OpenAssetIO's ``{frame}`` template syntax."""
+
+    token = "{frame}" if sequence.padding <= 1 else f"{{frame:0{sequence.padding}d}}"
+    return f"{sequence.prefix}{token}{sequence.suffix}"

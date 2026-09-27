@@ -15,9 +15,11 @@ manager.initialize({
 ```
 
 The Manager is intentionally read-only. A representation remains one
-OpenAssetIO entity, including an image sequence; its compact frame structure is
-reported with `ImageTrait` and `FrameRangedTrait`, while `LocatableContentTrait`
-points to the resolved sequence directory.
+OpenAssetIO entity, including an image sequence. A sequence is reported with
+the traits of OpenAssetIO-MediaCreation's `BitmapImageResourceSequence`
+specification: `ImageCollectionTrait`, `FrameRangedTrait`, and a templated
+`LocatableContentTrait` location such as `file:///shots/sh010.{frame:04d}.exr`
+(percent-encoded) with `isTemplated` set.
 
 ## Install a release
 
