@@ -21,7 +21,8 @@ from openassetio_mediacreation.traits.representation import (
 )
 from openassetio_mediacreation.traits.timeDomain import FrameRangedTrait_v1
 from postproject import (
-    ImageSequenceInput,
+    FileSource,
+    ImageSequenceSource,
     MetadataBool,
     MetadataDecimal,
     MetadataI64,
@@ -92,7 +93,7 @@ def representation_kind(traits_data):
 
 
 def content_from_traits(traits_data):
-    """Return a file path or an image-sequence input from registered traits."""
+    """Return the media source a registered trait set locates."""
 
     if not traits_data.hasTrait(LocatableContentTrait.kId):
         raise invalid_trait_set("published media needs LocatableContentTrait")
@@ -102,7 +103,7 @@ def content_from_traits(traits_data):
         raise invalid_trait_set("LocatableContentTrait has no location")
     path = _file_path(location)
     if not content.getIsTemplated(False):
-        return Path(path)
+        return FileSource(Path(path))
     directory, name = os.path.split(path)
     match = _FRAME_TOKEN.fullmatch(name)
     if match is None:
@@ -216,7 +217,7 @@ def _sequence(traits_data, directory, match):
         )
     )
     numerator, denominator = frame_rate(frames_per_second)
-    return ImageSequenceInput(
+    return ImageSequenceSource(
         directory,
         prefix,
         suffix,

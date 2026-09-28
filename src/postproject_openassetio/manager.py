@@ -24,7 +24,6 @@ from postproject import (
     ActivityEdge,
     ActivitySpec,
     AssetId,
-    ImageSequenceInput,
     JobId,
     JobRequest,
     JobState,
@@ -258,14 +257,7 @@ class PostProjectManagerInterface(ManagerInterface):
             if job_id is None:
                 job_id = transaction.request_job(JobRequest(PUBLISH_KIND, (), asset_id, kind))
             claim_id = transaction.claim_job(job_id, tool, None, now, now + CLAIM_LEASE_MICROS)
-            if isinstance(content, ImageSequenceInput):
-                representation_id = transaction.add_image_sequence_representation(
-                    asset_id, kind, content
-                )
-            else:
-                representation_id = transaction.add_single_file_representation(
-                    asset_id, kind, content
-                )
+            representation_id = transaction.add_representation(asset_id, kind, content)
             for metadata_property, value in persisted_metadata(data):
                 transaction.add_metadata(representation_id, metadata_property, value)
             activity_id = transaction.create_activity(

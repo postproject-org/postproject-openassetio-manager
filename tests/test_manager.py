@@ -12,7 +12,7 @@ from openassetio_mediacreation.specifications.twoDimensional import (
 )
 from openassetio_mediacreation.traits.timeDomain import FrameRangedTrait_v1
 from openassetio_mediacreation.traits.twoDimensional import PixelBasedTrait_v1
-from postproject import ImageSequenceInput, Production, RepresentationKind
+from postproject import ImageSequenceSource, Production, RepresentationKind
 
 
 LocatableContentTrait = LocatableContentTrait_v1
@@ -99,21 +99,13 @@ def test_image_sequence_remains_one_representation(tmp_path, native_library):
     production_path = tmp_path / "sequence.pproj"
     with Production.create(production_path, library_path=native_library) as production:
         with production.transaction() as transaction:
-            seed = tmp_path / "seed.mov"
-            seed.write_bytes(b"seed")
-            asset_id = transaction.import_media(seed, "Shot")
-            representation_id = transaction.add_image_sequence_representation(
-                asset_id,
-                RepresentationKind.ORIGINAL,
-                ImageSequenceInput(
-                    str(sequence), "shot.", ".exr", 4, 1001, 1003, 1, 24, 1
-                ),
+            asset_id = transaction.import_media(
+                ImageSequenceSource(sequence, "shot.", ".exr", 4, 1001, 1003, 1, 24, 1),
+                "Shot",
             )
-        representation = next(
-            item
-            for item in production.representations[asset_id]
-            if item.id == representation_id
-        )
+        # The sequence is the asset's only original representation.
+        (representation,) = production.representations[asset_id]
+        assert representation.kind is RepresentationKind.ORIGINAL
         assert len(representation.resources) == 1
         reference = production.host_bindings[representation.id]
 
