@@ -150,7 +150,9 @@ def test_publishes_exr_sequence_as_one_representation(
         assert representation.structure_kind == ContentStructureKind.IMAGE_SEQUENCE
         assert len(representation.resources) == 1
         sequence = representation.image_sequence
-        assert (sequence.start, sequence.end, sequence.padding) == (1001, 1003, 4)
+        assert (sequence.start, sequence.end) == (1001, 1003)
+        (locator,) = representation.resources[0].locators
+        assert locator.sequence_naming.padding == 4
         assert (sequence.rate_numerator, sequence.rate_denominator) == (24000, 1001)
 
         (activity,) = production.activities_producing[representation_id]

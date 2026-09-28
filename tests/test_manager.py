@@ -12,7 +12,7 @@ from openassetio_mediacreation.specifications.twoDimensional import (
 )
 from openassetio_mediacreation.traits.timeDomain import FrameRangedTrait_v1
 from openassetio_mediacreation.traits.twoDimensional import PixelBasedTrait_v1
-from postproject import ImageSequenceSource, Production, RepresentationKind
+from postproject import ImageSequenceSource, Production, RepresentationKind, SequenceNaming
 
 
 LocatableContentTrait = LocatableContentTrait_v1
@@ -100,7 +100,9 @@ def test_image_sequence_remains_one_representation(tmp_path, native_library):
     with Production.create(production_path, library_path=native_library) as production:
         with production.transaction() as transaction:
             asset_id = transaction.import_media(
-                ImageSequenceSource(sequence, "shot.", ".exr", 4, 1001, 1003, 1, 24, 1),
+                ImageSequenceSource(
+                    sequence, SequenceNaming("shot.", ".exr", 4), 1001, 1003, 1, 24, 1
+                ),
                 "Shot",
             )
         # The sequence is the asset's only original representation.
@@ -127,3 +129,27 @@ def test_image_sequence_remains_one_representation(tmp_path, native_library):
     assert location.getIsTemplated() is True
     assert FrameRangedTrait(data).getStartFrame() == 1001
     assert FrameRangedTrait(data).getEndFrame() == 1003
+
+    # Graded and renamed frames are relinked by content; the template then
+    # names the frames as they are called at the resolved location.
+    graded = tmp_path / "graded"
+    graded.mkdir()
+    for frame in range(1001, 1004):
+        (sequence / f"shot.{frame:04}.exr").rename(graded / f"shot-graded_{frame:04}.exr")
+    with Production.open(production_path, library_path=native_library) as production:
+        (resolution,) = production.resolve(asset_id, search_directories=[graded])
+        (resource,) = resolution.resources
+        (candidate,) = resource.candidates
+        with production.transaction() as transaction:
+            transaction.confirm_locator(
+                resource.resource_id,
+                candidate.uri,
+                media_root=candidate.media_root,
+                sequence_naming=candidate.sequence_naming,
+            )
+    data = manager.resolve(
+        entity, {LocatableContentTrait.kId}, ResolveAccess.kRead, context
+    )
+    assert LocatableContentTrait(data).getLocation() == (
+        f"{graded.resolve().as_uri()}/shot-graded_%7Bframe%3A04d%7D.exr"
+    )

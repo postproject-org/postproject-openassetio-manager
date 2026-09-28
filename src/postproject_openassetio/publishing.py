@@ -30,6 +30,7 @@ from postproject import (
     MetadataProperty,
     MetadataString,
     RepresentationKind,
+    SequenceNaming,
 )
 
 LocatableContentTrait = LocatableContentTrait_v1
@@ -219,9 +220,7 @@ def _sequence(traits_data, directory, match):
     numerator, denominator = frame_rate(frames_per_second)
     return ImageSequenceSource(
         directory,
-        prefix,
-        suffix,
-        padding,
+        SequenceNaming(prefix, suffix, padding),
         start,
         end,
         step,

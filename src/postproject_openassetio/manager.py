@@ -391,9 +391,15 @@ class PostProjectManagerInterface(ManagerInterface):
             sequence = representation.image_sequence
             if LocatableContentTrait.kId in requested:
                 trait = LocatableContentTrait(data)
-                location = self._location_for(representation, target)
+                candidate = self._candidate_for(representation, target)
+                location = candidate.uri
                 if sequence is not None:
-                    location = f"{location.rstrip('/')}/{quote(frame_template(sequence))}"
+                    # The file names belong to the resolved location, which
+                    # may name the frames differently from another copy.
+                    if candidate.sequence_naming is None:
+                        raise ValueError("image-sequence location has no file naming")
+                    template = frame_template(candidate.sequence_naming)
+                    location = f"{location.rstrip('/')}/{quote(template)}"
                 trait.setLocation(location)
                 trait.setIsTemplated(sequence is not None)
             if sequence is not None:
@@ -409,7 +415,7 @@ class PostProjectManagerInterface(ManagerInterface):
                     )
         return data
 
-    def _location_for(self, representation, target):
+    def _candidate_for(self, representation, target):
         resource_id = target[1].id if isinstance(target, tuple) else representation.resources[0].id
         resolutions = self._production.resolve(
             representation.asset_id, self._root_mappings
@@ -420,7 +426,7 @@ class PostProjectManagerInterface(ManagerInterface):
         resource = next(item for item in resolved.resources if item.resource_id == resource_id)
         if len(resource.candidates) != 1:
             raise ValueError("resource does not resolve to exactly one location")
-        return resource.candidates[0].uri
+        return resource.candidates[0]
 
     @staticmethod
     def _reject_batch(entityReferences, errorCallback, message):
@@ -438,8 +444,8 @@ class PostProjectManagerInterface(ManagerInterface):
         )
 
 
-def frame_template(sequence):
-    """Return a sequence file name in OpenAssetIO's ``{frame}`` template syntax."""
+def frame_template(naming):
+    """Return a sequence file naming in OpenAssetIO's ``{frame}`` template syntax."""
 
-    token = "{frame}" if sequence.padding <= 1 else f"{{frame:0{sequence.padding}d}}"
-    return f"{sequence.prefix}{token}{sequence.suffix}"
+    token = "{frame}" if naming.padding <= 1 else f"{{frame:0{naming.padding}d}}"
+    return f"{naming.prefix}{token}{naming.suffix}"
