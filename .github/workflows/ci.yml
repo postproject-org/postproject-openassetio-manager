@@ -40,6 +40,14 @@ jobs:
           python -m uv pip install --system \
             --override "$RUNNER_TEMP/postproject-override.txt" \
             ./postproject/python . pytest
-      - run: pytest -W error
+      - run: |
+          mkdir -p evidence
+          POSTPROJECT_ABI_TRACE="$PWD/evidence/openassetio-manager-abi.txt" \
+            pytest -W error
         env:
           POSTPROJECT_LIBRARY: ${{ github.workspace }}/postproject/target/release/libpostproject.so
+      - uses: actions/upload-artifact@v6
+        with:
+          name: openassetio-manager-postproject-usage
+          path: evidence/
+          if-no-files-found: error
