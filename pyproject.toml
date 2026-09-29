@@ -5,7 +5,7 @@ requires-python = ">=3.11"
 dependencies = [
   "openassetio>=1.0.2,<2",
   "openassetio-mediacreation>=1.0.0a13,<2",
-  "postproject>=0.4.0a1,<0.5",
+  "postproject>=0.4.0a1,<0.6",
 ]
 description = "OpenAssetIO Manager backed by a PostProject production"
 readme = "README.md"
