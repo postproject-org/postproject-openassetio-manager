@@ -89,3 +89,11 @@ publish.
 
 Any PostProject consumer can observe a publish without polling, for example
 with a revision waiter on the same production from another process.
+
+## Shared-production acceptance
+
+The maintained Kdenlive pilot runs `tests/shared_production.py` after Blender
+records a derived render in their explicitly selected production. The script
+opens the same `.pproj`, turns the render's PostProject host binding into an
+OpenAssetIO entity reference, and resolves its `LocatableContentTrait` through
+the Manager. It never reads the `.kdenlive` or `.blend` file.
