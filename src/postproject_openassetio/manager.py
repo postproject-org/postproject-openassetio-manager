@@ -23,15 +23,15 @@ from openassetio_mediacreation.traits.usage import EntityTrait_v1
 from postproject import (
     ActivityEdge,
     ActivitySpec,
-    AssetId,
-    JobId,
+    AssetRef,
+    JobRef,
     JobRequest,
     JobState,
     OriginIdentity,
     PostProjectError,
     Production,
-    RepresentationId,
-    ResourceId,
+    RepresentationRef,
+    ResourceRef,
     RevisionContext,
     ToolIdentity,
 )
@@ -193,7 +193,7 @@ class PostProjectManagerInterface(ManagerInterface):
             try:
                 self._require_write(publishingAccess)
                 target = self._publish_target(reference.toString())
-                if isinstance(target, JobId):
+                if isinstance(target, JobRef):
                     # Preflighting a working reference again keeps it.
                     successCallback(index, reference)
                     continue
@@ -202,13 +202,13 @@ class PostProjectManagerInterface(ManagerInterface):
                         BatchElementError.ErrorCode.kInvalidPreflightHint,
                         "published media needs LocatableContentTrait",
                     )
-                request = JobRequest(PUBLISH_KIND, (), target, representation_kind(hints))
+                request = JobRequest(PUBLISH_KIND, (), target.id, representation_kind(hints))
                 with self._production.transaction() as transaction:
                     transaction.set_revision_context(
                         self._revision_context(f"Prepare publish to {reference.toString()}")
                     )
                     job_id = transaction.request_job(request)
-                successCallback(index, EntityReference(self._production.host_bindings[job_id]))
+                successCallback(index, EntityReference(self._production.host_bindings[JobRef(job_id)]))
             except PublishError as error:
                 errorCallback(index, error.batch_error())
 
@@ -228,7 +228,7 @@ class PostProjectManagerInterface(ManagerInterface):
                 target = self._publish_target(reference.toString())
                 representation_id = self._register(target, data, hostSession)
                 successCallback(
-                    index, EntityReference(self._production.host_bindings[representation_id])
+                    index, EntityReference(self._production.host_bindings[RepresentationRef(representation_id)])
                 )
             except PublishError as error:
                 errorCallback(index, error.batch_error())
@@ -243,11 +243,11 @@ class PostProjectManagerInterface(ManagerInterface):
 
     def _register(self, target, data, hostSession):
         content = content_from_traits(data)
-        if isinstance(target, JobId):
-            job = self._production.job(target)
+        if isinstance(target, JobRef):
+            job = self._production.job(target.id)
             job_id, asset_id, kind = job.id, job.output_asset_id, job.output_representation_kind
         else:
-            job_id, asset_id, kind = None, target, representation_kind(data)
+            job_id, asset_id, kind = None, target.id, representation_kind(data)
         tool = ToolIdentity(hostSession.host().displayName())
         now = time.time_ns() // 1_000
         # The request (without preflight), claim, representation, persisted
@@ -259,7 +259,7 @@ class PostProjectManagerInterface(ManagerInterface):
             claim_id = transaction.claim_job(job_id, tool, None, now, now + CLAIM_LEASE_MICROS)
             representation_id = transaction.add_representation(asset_id, kind, content)
             for metadata_property, value in persisted_metadata(data):
-                transaction.add_metadata(representation_id, metadata_property, value)
+                transaction.add_metadata(RepresentationRef(representation_id), metadata_property, value)
             activity_id = transaction.create_activity(
                 ActivitySpec(
                     PUBLISH_KIND,
@@ -276,16 +276,16 @@ class PostProjectManagerInterface(ManagerInterface):
 
         try:
             target = self._parse(reference)
-            if isinstance(target, AssetId):
-                return self._production.asset(target).id
-            if isinstance(target, RepresentationId):
+            if isinstance(target, AssetRef):
+                return AssetRef(self._production.asset(target.id).id)
+            if isinstance(target, RepresentationRef):
                 # Representations are immutable facts: writing to one adds a
                 # new representation of its asset and leaves it untouched.
-                return self._production.representation(target).asset_id
-            if isinstance(target, JobId):
-                job = self._production.job(target)
+                return AssetRef(self._production.representation(target.id).asset_id)
+            if isinstance(target, JobRef):
+                job = self._production.job(target.id)
                 if job.kind == PUBLISH_KIND and job.state == JobState.REQUESTED:
-                    return job.id
+                    return JobRef(job.id)
         except (PostProjectError, ValueError) as error:
             raise PublishError(
                 BatchElementError.ErrorCode.kEntityAccessError,
@@ -317,16 +317,16 @@ class PostProjectManagerInterface(ManagerInterface):
         # Entities are read by identity on every call, so media committed by
         # other processes after initialization is visible without re-indexing.
         target = self._parse(reference)
-        if isinstance(target, AssetId):
-            return self._production.asset(target)
-        if isinstance(target, RepresentationId):
-            return self._production.representation(target)
-        if isinstance(target, ResourceId):
-            users = self._production.representations_using_resource(target, limit=2)
+        if isinstance(target, AssetRef):
+            return self._production.asset(target.id)
+        if isinstance(target, RepresentationRef):
+            return self._production.representation(target.id)
+        if isinstance(target, ResourceRef):
+            users = self._production.representations_using_resource(target.id, limit=2)
             if len(users.items) != 1:
                 raise ValueError("resource is not used by exactly one representation")
             representation = users.items[0]
-            resource = next(item for item in representation.resources if item.id == target)
+            resource = next(item for item in representation.resources if item.id == target.id)
             return representation, resource
         raise ValueError("object kind is not exposed as an OpenAssetIO media entity")
 
@@ -353,7 +353,7 @@ class PostProjectManagerInterface(ManagerInterface):
         if not hasattr(representation, "resources"):
             return {}
         persisted = {}
-        for assertion in self._production.metadata[representation.id]:
+        for assertion in self._production.metadata[RepresentationRef(representation.id)]:
             vocabulary = assertion.property.vocabulary
             if assertion.property == TRAIT_SET_PROPERTY:
                 for trait_id in trait_set(assertion.value):

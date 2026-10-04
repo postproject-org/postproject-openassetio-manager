@@ -12,7 +12,7 @@ from openassetio_mediacreation.specifications.twoDimensional import (
 )
 from openassetio_mediacreation.traits.timeDomain import FrameRangedTrait_v1
 from openassetio_mediacreation.traits.twoDimensional import PixelBasedTrait_v1
-from postproject import ImageSequenceSource, Production, RepresentationKind, SequenceNaming
+from postproject import ResourceRef, RepresentationRef, ImageSequenceSource, Production, RepresentationKind, SequenceNaming
 
 
 LocatableContentTrait = LocatableContentTrait_v1
@@ -47,7 +47,7 @@ def test_resolves_file_representation(tmp_path, native_library):
         with production.transaction() as transaction:
             asset_id = transaction.import_media(media, "Camera A")
         representation = production.representations[asset_id][0]
-        reference = production.host_bindings[representation.id]
+        reference = production.host_bindings[RepresentationRef(representation.id)]
 
     manager = create_manager(
         {"production_path": str(production_path), "library_path": native_library}
@@ -76,8 +76,8 @@ def test_resolves_media_added_after_initialization(tmp_path, native_library):
             asset_id = transaction.import_media(media, "Late")
         representation = production.representations[asset_id][0]
         references = [
-            production.host_bindings[representation.id],
-            production.host_bindings[representation.resources[0].id],
+            production.host_bindings[RepresentationRef(representation.id)],
+            production.host_bindings[ResourceRef(representation.resources[0].id)],
         ]
 
     context = manager.createContext()
@@ -109,7 +109,7 @@ def test_image_sequence_remains_one_representation(tmp_path, native_library):
         (representation,) = production.representations[asset_id]
         assert representation.kind is RepresentationKind.ORIGINAL
         assert len(representation.resources) == 1
-        reference = production.host_bindings[representation.id]
+        reference = production.host_bindings[RepresentationRef(representation.id)]
 
     manager = create_manager(
         {"production_path": str(production_path), "library_path": native_library}

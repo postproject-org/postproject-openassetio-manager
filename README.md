@@ -40,6 +40,10 @@ Manager.
 
 ## Development
 
+The development SDK returns UUID values with nominal ID hints. Dynamic targets
+use references such as `RepresentationRef(id)`; the Manager keeps those kinds
+when parsing host bindings. Use its matching Python wheel and native library.
+
 Install PostProject's native package and Python wheel, then run:
 
 ```sh

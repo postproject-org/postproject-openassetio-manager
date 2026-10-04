@@ -23,10 +23,12 @@ from openassetio_mediacreation.traits.representation import ProxyTrait_v1
 from openassetio_mediacreation.traits.timeDomain import FrameRangedTrait_v1
 from openassetio_mediacreation.traits.twoDimensional import PixelBasedTrait_v1
 from postproject import (
+    JobRef,
+    AssetRef,
+    RepresentationRef,
     ContentStructureKind,
     JobState,
     Production,
-    RepresentationId,
     RepresentationKind,
 )
 from test_manager import create_manager
@@ -72,7 +74,7 @@ def production_with_shot(tmp_path, native_library):
     with Production.create(path, library_path=native_library) as production:
         with production.transaction() as transaction:
             asset_id = transaction.import_media(seed, "sh010")
-        reference = production.host_bindings[asset_id]
+        reference = production.host_bindings[AssetRef(asset_id)]
     return path, asset_id, reference
 
 
@@ -140,8 +142,8 @@ def test_publishes_exr_sequence_as_one_representation(
 
     with Production.open(path, library_path=native_library) as production:
         binding = production.host_bindings.parse(final.toString())
-        representation_id = binding.object
-        assert isinstance(representation_id, RepresentationId)
+        assert isinstance(binding.object, RepresentationRef)
+        representation_id = binding.object.id
         assert observed == {"result": "revisions", "added": [str(representation_id)]}
 
         representation = production.representation(representation_id)
@@ -160,7 +162,7 @@ def test_publishes_exr_sequence_as_one_representation(
         assert activity.inputs == ()
         assert activity.tool.name == "PostProject Manager tests"
         (job,) = production.jobs(limit=10).items
-        assert job.id == production.host_bindings.parse(working.toString()).object
+        assert JobRef(job.id) == production.host_bindings.parse(working.toString()).object
         assert job.state == JobState.SUCCEEDED
         assert job.completion.representation_id == representation_id
         assert job.completion.activity_id == activity.id
@@ -193,7 +195,7 @@ def test_registers_existing_file_without_preflight(
     path, asset_id, _ = production_with_shot
     with Production.open(path, library_path=native_library) as production:
         original = production.representations[asset_id][0]
-        reference = production.host_bindings[original.id]
+        reference = production.host_bindings[RepresentationRef(original.id)]
     proxy = tmp_path / "sh010_proxy.mov"
     proxy.write_bytes(b"proxy media")
     manager = create_manager(
@@ -209,7 +211,9 @@ def test_registers_existing_file_without_preflight(
     )
 
     with Production.open(path, library_path=native_library) as production:
-        proxy_id = production.host_bindings.parse(final.toString()).object
+        binding = production.host_bindings.parse(final.toString())
+        assert isinstance(binding.object, RepresentationRef)
+        proxy_id = binding.object.id
         assert proxy_id != original.id
         assert production.representation(original.id) == original
         representation = production.representation(proxy_id)

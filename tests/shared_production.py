@@ -8,7 +8,7 @@ from openassetio.hostApi import HostInterface, ManagerFactory
 from openassetio.log import ConsoleLogger
 from openassetio.pluginSystem import PythonPluginSystemManagerImplementationFactory
 from openassetio_mediacreation.traits.content import LocatableContentTrait_v1
-from postproject import Production, RepresentationKind
+from postproject import RepresentationRef, Production, RepresentationKind
 
 
 class SharedProductionHost(HostInterface):
@@ -31,7 +31,7 @@ with Production.open(production_path, library_path=library_path) as production:
         for representation in production.representations[asset.id]
         if representation.kind is RepresentationKind.DERIVED
     )
-    reference = production.host_bindings[render.id]
+    reference = production.host_bindings[RepresentationRef(render.id)]
 
 logger = ConsoleLogger()
 factory = PythonPluginSystemManagerImplementationFactory(logger)
