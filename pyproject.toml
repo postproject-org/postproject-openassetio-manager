@@ -1,11 +1,11 @@
 [project]
 name = "postproject-openassetio-manager"
-version = "0.3.0"
+version = "0.4.0"
 requires-python = ">=3.11"
 dependencies = [
   "openassetio>=1.0.2,<2",
   "openassetio-mediacreation>=1.0.0a13,<2",
-  "postproject>=0.4.0a1,<0.7",
+  "postproject>=0.7.0a1,<0.8",
 ]
 description = "OpenAssetIO Manager backed by a PostProject production"
 readme = "README.md"
