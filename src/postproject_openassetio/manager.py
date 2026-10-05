@@ -208,6 +208,7 @@ class PostProjectManagerInterface(ManagerInterface):
                         self._revision_context(f"Prepare publish to {reference.toString()}")
                     )
                     job_id = transaction.request_job(request)
+                    transaction.commit()
                 successCallback(index, EntityReference(self._production.host_bindings[JobRef(job_id)]))
             except PublishError as error:
                 errorCallback(index, error.batch_error())
@@ -269,6 +270,7 @@ class PostProjectManagerInterface(ManagerInterface):
                 )
             )
             transaction.complete_job(job_id, claim_id, now, representation_id, activity_id)
+            transaction.commit()
         return representation_id
 
     def _publish_target(self, reference):

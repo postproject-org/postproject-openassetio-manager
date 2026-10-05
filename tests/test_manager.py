@@ -46,6 +46,7 @@ def test_resolves_file_representation(tmp_path, native_library):
     with Production.create(production_path, library_path=native_library) as production:
         with production.transaction() as transaction:
             asset_id = transaction.import_media(media, "Camera A")
+            transaction.commit()
         representation = production.representations[asset_id][0]
         reference = production.host_bindings[RepresentationRef(representation.id)]
 
@@ -74,6 +75,7 @@ def test_resolves_media_added_after_initialization(tmp_path, native_library):
     with Production.open(production_path, library_path=native_library) as production:
         with production.transaction() as transaction:
             asset_id = transaction.import_media(media, "Late")
+            transaction.commit()
         representation = production.representations[asset_id][0]
         references = [
             production.host_bindings[RepresentationRef(representation.id)],
@@ -105,6 +107,7 @@ def test_image_sequence_remains_one_representation(tmp_path, native_library):
                 ),
                 "Shot",
             )
+            transaction.commit()
         # The sequence is the asset's only original representation.
         (representation,) = production.representations[asset_id]
         assert representation.kind is RepresentationKind.ORIGINAL
@@ -147,6 +150,7 @@ def test_image_sequence_remains_one_representation(tmp_path, native_library):
                 media_root=candidate.media_root,
                 sequence_naming=candidate.sequence_naming,
             )
+            transaction.commit()
     data = manager.resolve(
         entity, {LocatableContentTrait.kId}, ResolveAccess.kRead, context
     )

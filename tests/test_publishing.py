@@ -74,6 +74,7 @@ def production_with_shot(tmp_path, native_library):
     with Production.create(path, library_path=native_library) as production:
         with production.transaction() as transaction:
             asset_id = transaction.import_media(seed, "sh010")
+            transaction.commit()
         reference = production.host_bindings[AssetRef(asset_id)]
     return path, asset_id, reference
 
