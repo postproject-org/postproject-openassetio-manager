@@ -65,7 +65,8 @@ production work:
   asset and returns the job's host-object reference as the working reference.
   Representations are never modified in place. `ProxyTrait` or `OriginalTrait`
   select the representation kind; other media is recorded as derived.
-- `register` on the working reference claims and completes that job in one
+- `register` on the working reference uses a production-bound, library-timed
+  lease to claim and complete that job in one
   PostProject transaction: the representation, its resources and locator, the
   registered traits, the producing activity (attributed to the host's display
   name), and the job's success become durable together with one revision, or
@@ -84,7 +85,7 @@ production work:
 
 The working reference names a *requested* job rather than a claimed one:
 OpenAssetIO may hand a working reference to another process, and a PostProject
-claim token is a capability that must not travel inside an entity reference.
+lease credential must stay private and never travel inside an entity reference.
 An abandoned preflight leaves a requested job that any PostProject surface can
 cancel. Publishing with `kCreateRelated`, to non-file locations, or with
 template variables other than `frame` is rejected. Published media has no

@@ -1,6 +1,7 @@
 """OpenAssetIO Manager backed by PostProject's public Python API."""
 
 import time
+from datetime import timedelta
 from importlib.metadata import PackageNotFoundError, version
 from urllib.parse import quote
 
@@ -56,7 +57,7 @@ FrameRangedTrait = FrameRangedTrait_v1
 ImageCollectionTrait = ImageCollectionTrait_v1
 EntityTrait = EntityTrait_v1
 
-CLAIM_LEASE_MICROS = 60_000_000
+CLAIM_LEASE_DURATION = timedelta(minutes=1)
 """Lease of the claim that registration takes and completes in one commit."""
 
 REPOSITORY_URI = "https://github.com/postproject-org/postproject-openassetio-manager"
@@ -257,20 +258,20 @@ class PostProjectManagerInterface(ManagerInterface):
             transaction.set_revision_context(self._revision_context("Register published media"))
             if job_id is None:
                 job_id = transaction.request_job(JobRequest(PUBLISH_KIND, (), asset_id, kind))
-            claim_id = transaction.claim_job(job_id, tool, None, now, now + CLAIM_LEASE_MICROS)
-            representation_id = transaction.add_representation(asset_id, kind, content)
-            for metadata_property, value in persisted_metadata(data):
-                transaction.add_metadata(RepresentationRef(representation_id), metadata_property, value)
-            activity_id = transaction.create_activity(
-                ActivitySpec(
-                    PUBLISH_KIND,
-                    (ActivityEdge(representation_id),),
-                    finished_at_unix_micros=now,
-                    tool=tool,
+            with transaction.claim_job_lease(job_id, tool, CLAIM_LEASE_DURATION) as lease:
+                representation_id = transaction.add_representation(asset_id, kind, content)
+                for metadata_property, value in persisted_metadata(data):
+                    transaction.add_metadata(RepresentationRef(representation_id), metadata_property, value)
+                activity_id = transaction.create_activity(
+                    ActivitySpec(
+                        PUBLISH_KIND,
+                        (ActivityEdge(representation_id),),
+                        finished_at_unix_micros=now,
+                        tool=tool,
+                    )
                 )
-            )
-            transaction.complete_job(job_id, claim_id, now, representation_id, activity_id)
-            transaction.commit()
+                transaction.complete_job_lease(lease, representation_id, activity_id)
+                transaction.commit()
         return representation_id
 
     def _publish_target(self, reference):
