@@ -7,8 +7,9 @@ from openassetio.access import ResolveAccess
 from openassetio.hostApi import HostInterface, ManagerFactory
 from openassetio.log import ConsoleLogger
 from openassetio.pluginSystem import PythonPluginSystemManagerImplementationFactory
-from openassetio_mediacreation.traits.content import LocatableContentTrait_v1
-from postproject import RepresentationRef, Production, RepresentationKind
+from postproject import Production, RepresentationKind, RepresentationRef
+
+from postproject_openassetio.traits import LocatableContentTrait
 
 
 class SharedProductionHost(HostInterface):
@@ -44,9 +45,9 @@ manager.initialize(
 context = manager.createContext()
 data = manager.resolve(
     manager.createEntityReference(reference),
-    {LocatableContentTrait_v1.kId},
+    {LocatableContentTrait.kId},
     ResolveAccess.kRead,
     context,
 )
-location = LocatableContentTrait_v1(data).getLocation()
+location = LocatableContentTrait(data).getLocation()
 assert location == (production_path.parent / "blender-render.png").as_uri()

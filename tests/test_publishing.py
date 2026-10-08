@@ -14,30 +14,27 @@ from openassetio.access import (
 )
 from openassetio.errors import BatchElementError, BatchElementException
 from openassetio.trait import TraitsData
-from openassetio_mediacreation.specifications.twoDimensional import (
-    BitmapImageResourceSequenceSpecification_v1,
-)
-from openassetio_mediacreation.traits.content import LocatableContentTrait_v1
 from openassetio_mediacreation.traits.managementPolicy import ManagedTrait
-from openassetio_mediacreation.traits.representation import ProxyTrait_v1
-from openassetio_mediacreation.traits.timeDomain import FrameRangedTrait_v1
-from openassetio_mediacreation.traits.twoDimensional import PixelBasedTrait_v1
 from postproject import (
-    JobRef,
     AssetRef,
-    RepresentationRef,
     ContentStructureKind,
+    JobRef,
     JobState,
     Production,
     RepresentationKind,
+    RepresentationRef,
 )
 from test_manager import create_manager
 
-SequenceSpecification = BitmapImageResourceSequenceSpecification_v1
-LocatableContentTrait = LocatableContentTrait_v1
-FrameRangedTrait = FrameRangedTrait_v1
-PixelBasedTrait = PixelBasedTrait_v1
-ProxyTrait = ProxyTrait_v1
+from postproject_openassetio.traits import (
+    BitmapImageResourceSequenceSpecification,
+    FrameRangedTrait,
+    LocatableContentTrait,
+    PixelBasedTrait,
+    ProxyTrait,
+)
+
+SequenceSpecification = BitmapImageResourceSequenceSpecification
 
 OBSERVER = textwrap.dedent(
     """

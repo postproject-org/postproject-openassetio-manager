@@ -15,12 +15,7 @@ from openassetio.access import (
 from openassetio.errors import BatchElementError
 from openassetio.managerApi import ManagerInterface
 from openassetio.trait import TraitsData
-from openassetio_mediacreation.traits.content import LocatableContentTrait_v1
-from openassetio_mediacreation.traits.identity import DisplayNameTrait_v1
 from openassetio_mediacreation.traits.managementPolicy import ManagedTrait
-from openassetio_mediacreation.traits.timeDomain import FrameRangedTrait_v1
-from openassetio_mediacreation.traits.twoDimensional import ImageCollectionTrait_v1
-from openassetio_mediacreation.traits.usage import EntityTrait_v1
 from postproject import (
     ActivityEdge,
     ActivitySpec,
@@ -49,13 +44,15 @@ from .publishing import (
     representation_kind,
     trait_set,
 )
+from .traits import (
+    DisplayNameTrait,
+    EntityTrait,
+    FrameRangedTrait,
+    ImageCollectionTrait,
+    LocatableContentTrait,
+)
 
 REFERENCE_PREFIX = "https://postproject.org/ref/v1/"
-LocatableContentTrait = LocatableContentTrait_v1
-DisplayNameTrait = DisplayNameTrait_v1
-FrameRangedTrait = FrameRangedTrait_v1
-ImageCollectionTrait = ImageCollectionTrait_v1
-EntityTrait = EntityTrait_v1
 
 CLAIM_LEASE_DURATION = timedelta(minutes=1)
 """Lease of the claim that registration takes and completes in one commit."""
@@ -386,9 +383,9 @@ class PostProjectManagerInterface(ManagerInterface):
                 for key, value in properties.items():
                     if (trait_id, key) not in STRUCTURAL_PROPERTIES:
                         data.setTraitProperty(trait_id, key, value)
-        if DisplayNameTrait.kId in requested and hasattr(target, "display_name"):
-            if target.display_name:
-                DisplayNameTrait(data).setName(target.display_name)
+        if (DisplayNameTrait.kId in requested
+                and hasattr(target, "display_name") and target.display_name):
+            DisplayNameTrait(data).setName(target.display_name)
         representation = target[0] if isinstance(target, tuple) else target
         if hasattr(representation, "resources"):
             sequence = representation.image_sequence

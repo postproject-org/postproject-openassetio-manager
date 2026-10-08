@@ -14,12 +14,6 @@ from urllib.parse import unquote, urlsplit
 from urllib.request import url2pathname
 
 from openassetio.errors import BatchElementError
-from openassetio_mediacreation.traits.content import LocatableContentTrait_v1
-from openassetio_mediacreation.traits.representation import (
-    OriginalTrait_v1,
-    ProxyTrait_v1,
-)
-from openassetio_mediacreation.traits.timeDomain import FrameRangedTrait_v1
 from postproject import (
     FileSource,
     ImageSequenceSource,
@@ -33,8 +27,7 @@ from postproject import (
     SequenceNaming,
 )
 
-LocatableContentTrait = LocatableContentTrait_v1
-FrameRangedTrait = FrameRangedTrait_v1
+from .traits import FrameRangedTrait, LocatableContentTrait, OriginalTrait, ProxyTrait
 
 PUBLISH_KIND = "org.postproject:openassetio-publish"
 """Job and activity kind of every publish through this Manager."""
@@ -86,9 +79,9 @@ def representation_kind(traits_data):
     material, which PostProject records as a derived representation.
     """
 
-    if traits_data.hasTrait(ProxyTrait_v1.kId):
+    if traits_data.hasTrait(ProxyTrait.kId):
         return RepresentationKind.PROXY
-    if traits_data.hasTrait(OriginalTrait_v1.kId):
+    if traits_data.hasTrait(OriginalTrait.kId):
         return RepresentationKind.ORIGINAL
     return RepresentationKind.DERIVED
 

@@ -15,6 +15,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        mediacreation: [bundled-nuke-17, current]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -40,6 +43,9 @@ jobs:
           python -m uv pip install --system \
             --override "$RUNNER_TEMP/postproject-override.txt" \
             ./postproject/python . pytest
+      - name: Check the documented Nuke 17 library combination
+        if: matrix.mediacreation == 'bundled-nuke-17'
+        run: python -m pip install openassetio==1.0.0 openassetio-mediacreation==1.0.0a12
       - run: |
           mkdir -p evidence
           POSTPROJECT_ABI_TRACE="$PWD/evidence/openassetio-manager-abi.txt" \
@@ -48,6 +54,6 @@ jobs:
           POSTPROJECT_LIBRARY: ${{ github.workspace }}/postproject/target/release/libpostproject.so
       - uses: actions/upload-artifact@v6
         with:
-          name: openassetio-manager-postproject-usage
+          name: openassetio-manager-postproject-usage-${{ matrix.mediacreation }}
           path: evidence/
           if-no-files-found: error

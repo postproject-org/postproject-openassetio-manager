@@ -1,25 +1,26 @@
 """End-to-end Manager mapping tests against a real PostProject production."""
 
 from fractions import Fraction
-from pathlib import Path
 
 from openassetio.access import EntityTraitsAccess, ResolveAccess
 from openassetio.hostApi import HostInterface, ManagerFactory
 from openassetio.log import ConsoleLogger
 from openassetio.pluginSystem import PythonPluginSystemManagerImplementationFactory
-from openassetio_mediacreation.traits.content import LocatableContentTrait_v1
-from openassetio_mediacreation.specifications.twoDimensional import (
-    BitmapImageResourceSequenceSpecification_v1,
+from postproject import (
+    ImageSequenceSource,
+    Production,
+    RepresentationKind,
+    RepresentationRef,
+    ResourceRef,
+    SequenceNaming,
 )
-from openassetio_mediacreation.traits.timeDomain import FrameRangedTrait_v1
-from openassetio_mediacreation.traits.twoDimensional import PixelBasedTrait_v1
-from postproject import ResourceRef, RepresentationRef, ImageSequenceSource, Production, RepresentationKind, SequenceNaming
 
-
-LocatableContentTrait = LocatableContentTrait_v1
-FrameRangedTrait = FrameRangedTrait_v1
-PixelBasedTrait = PixelBasedTrait_v1
-BitmapImageResourceSequenceSpecification = BitmapImageResourceSequenceSpecification_v1
+from postproject_openassetio.traits import (
+    BitmapImageResourceSequenceSpecification,
+    FrameRangedTrait,
+    LocatableContentTrait,
+    PixelBasedTrait,
+)
 
 
 class FixtureHost(HostInterface):
