@@ -1,0 +1,8 @@
+# Replace these absolute paths or use tools/nuke_fixture.py to generate them.
+[manager]
+identifier = "org.postproject.manager"
+
+[manager.settings]
+production_path = "/show/production.pproj"
+library_path = "/opt/postproject/lib/libpostproject.so"
+"root.plates" = "/mnt/show/plates"
