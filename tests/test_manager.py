@@ -1,5 +1,6 @@
 """End-to-end Manager mapping tests against a real PostProject production."""
 
+from fractions import Fraction
 from pathlib import Path
 
 from openassetio.access import EntityTraitsAccess, ResolveAccess
@@ -103,7 +104,7 @@ def test_image_sequence_remains_one_representation(tmp_path, native_library):
         with production.transaction() as transaction:
             asset_id = transaction.import_media(
                 ImageSequenceSource(
-                    sequence, SequenceNaming("shot.", ".exr", 4), 1001, 1003, 1, 24, 1
+                    sequence, SequenceNaming("shot.", ".exr", 4), 1001, 1003, 1, Fraction(24)
                 ),
                 "Shot",
             )

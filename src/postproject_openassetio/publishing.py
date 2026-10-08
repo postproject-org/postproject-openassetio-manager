@@ -123,9 +123,9 @@ def frame_rate(frames_per_second):
     for denominator in (1, 1001):
         numerator = round(frames_per_second * denominator)
         if abs(numerator / denominator - frames_per_second) < 1e-3:
-            return numerator, denominator
+            return Fraction(numerator, denominator)
     rate = Fraction(frames_per_second).limit_denominator(1001)
-    return rate.numerator, rate.denominator
+    return rate
 
 
 def persisted_metadata(traits_data):
@@ -217,14 +217,13 @@ def _sequence(traits_data, directory, match):
             os.path.join(directory, f"{prefix}{frame:0{padding}d}{suffix}")
         )
     )
-    numerator, denominator = frame_rate(frames_per_second)
+    rate = frame_rate(frames_per_second)
     return ImageSequenceSource(
         directory,
         SequenceNaming(prefix, suffix, padding),
         start,
         end,
         step,
-        numerator,
-        denominator,
+        rate,
         missing,
     )
