@@ -97,6 +97,12 @@ with a revision waiter on the same production from another process.
 
 ## Shared-production acceptance
 
+[The prepared Nuke Read trial](docs/nuke-trial.md) provides a sequence fixture,
+TOML configuration and licensed-host acceptance script. The Manager supports
+Nuke 17's bundled OpenAssetIO 1.0.0 / MediaCreation alpha.12 classes as well as
+current version-one classes. Host execution and native template expansion remain
+separate from the passing license-independent Manager tests.
+
 The maintained Kdenlive pilot runs `tests/shared_production.py` after Blender
 records a derived render in their explicitly selected production. The script
 opens the same `.pproj`, turns the render's PostProject host binding into an
