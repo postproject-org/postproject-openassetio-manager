@@ -21,22 +21,21 @@ specification: `ImageCollectionTrait`, `FrameRangedTrait`, and a templated
 `LocatableContentTrait` location such as `file:///shots/sh010.{frame:04d}.exr`
 (percent-encoded) with `isTemplated` set.
 
-## Install a release
+## Install with PostProject 0.7
 
-Download the PostProject native archive and Python wheel from the matching
-[PostProject release](https://github.com/postproject-org/postproject/releases), then
-download this Manager wheel from the
-[Manager release](https://github.com/postproject-org/postproject-openassetio-manager/releases).
-Install both wheels together so dependency resolution does not need a source
-checkout:
+Download the native archive and Python wheel from the
+[PostProject 0.7 release](https://github.com/postproject-org/postproject/releases/tag/v0.7.0-alpha.1).
+Build Manager 0.4.0 from this checkout, then install both wheels:
 
 ```sh
-python -m pip install postproject-0.4.0a1-py3-none-any.whl \
-  postproject_openassetio_manager-0.2.0-py3-none-any.whl
+python -m pip wheel --no-deps . --wheel-dir dist
+python -m pip install postproject-0.7.0a1-py3-none-any.whl \
+  dist/postproject_openassetio_manager-0.4.0-py3-none-any.whl
 ```
 
 Pass the extracted native library as `library_path` when initializing the
 Manager.
+The older published Manager 0.2.0 wheel requires an earlier PostProject SDK.
 
 ## Development
 
