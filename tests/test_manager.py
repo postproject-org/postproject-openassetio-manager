@@ -46,7 +46,7 @@ def test_resolves_file_representation(tmp_path, native_library):
     media.write_bytes(b"camera media")
     production_path = tmp_path / "production.pproj"
     with Production.create(production_path, library_path=native_library) as production:
-        with production.transaction() as transaction:
+        with production.edit() as transaction:
             asset_id = transaction.import_media(media, "Camera A")
             transaction.commit()
         representation = production.representations[asset_id][0]
@@ -75,7 +75,7 @@ def test_resolves_media_added_after_initialization(tmp_path, native_library):
     media = tmp_path / "late.mov"
     media.write_bytes(b"late media")
     with Production.open(production_path, library_path=native_library) as production:
-        with production.transaction() as transaction:
+        with production.edit() as transaction:
             asset_id = transaction.import_media(media, "Late")
             transaction.commit()
         representation = production.representations[asset_id][0]
@@ -102,7 +102,7 @@ def test_image_sequence_remains_one_representation(tmp_path, native_library):
         (sequence / f"shot.{frame:04}.exr").write_bytes(f"frame {frame}".encode())
     production_path = tmp_path / "sequence.pproj"
     with Production.create(production_path, library_path=native_library) as production:
-        with production.transaction() as transaction:
+        with production.edit() as transaction:
             asset_id = transaction.import_media(
                 ImageSequenceSource(
                     sequence, SequenceNaming("shot.", ".exr", 4), 1001, 1003, 1, Fraction(24)
@@ -145,7 +145,7 @@ def test_image_sequence_remains_one_representation(tmp_path, native_library):
         (resolution,) = production.resolve(asset_id, search_directories=[graded])
         (resource,) = resolution.resources
         (candidate,) = resource.candidates
-        with production.transaction() as transaction:
+        with production.edit() as transaction:
             transaction.confirm_locator(
                 resource.resource_id,
                 candidate.uri,

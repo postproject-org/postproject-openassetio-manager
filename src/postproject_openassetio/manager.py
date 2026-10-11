@@ -201,7 +201,7 @@ class PostProjectManagerInterface(ManagerInterface):
                         "published media needs LocatableContentTrait",
                     )
                 request = JobRequest(PUBLISH_KIND, (), target.id, representation_kind(hints))
-                with self._production.transaction() as transaction:
+                with self._production.edit() as transaction:
                     transaction.set_revision_context(
                         self._revision_context(f"Prepare publish to {reference.toString()}")
                     )
@@ -251,7 +251,7 @@ class PostProjectManagerInterface(ManagerInterface):
         now = time.time_ns() // 1_000
         # The request (without preflight), claim, representation, persisted
         # traits, activity, and completion become durable together or not at all.
-        with self._production.transaction() as transaction:
+        with self._production.edit() as transaction:
             transaction.set_revision_context(self._revision_context("Register published media"))
             if job_id is None:
                 job_id = transaction.request_job(JobRequest(PUBLISH_KIND, (), asset_id, kind))

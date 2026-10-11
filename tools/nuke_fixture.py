@@ -65,7 +65,7 @@ def create_fixture(destination, library):
         (original / f"plate.{frame:04d}.png").write_bytes(png(frame))
     production_path = destination / "production.pproj"
     with Production.create(production_path, library_path=library) as production:
-        with production.transaction() as transaction:
+        with production.edit() as transaction:
             transaction.add_media_root("plates", "Nuke fixture")
             asset_id = transaction.import_media(
                 ImageSequenceSource(
