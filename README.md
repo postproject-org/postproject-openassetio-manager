@@ -21,16 +21,16 @@ specification: `ImageCollectionTrait`, `FrameRangedTrait`, and a templated
 `LocatableContentTrait` location such as `file:///shots/sh010.{frame:04d}.exr`
 (percent-encoded) with `isTemplated` set.
 
-## Install with PostProject 0.7
+## Install matching candidate packages
 
-Download the native archive and Python wheel from the
-[PostProject 0.7 release](https://github.com/postproject-org/postproject/releases/tag/v0.7.0-alpha.1).
-Build Manager 0.4.0 from this checkout, then install both wheels:
+Use native and Python packages from the same PostProject 0.8 candidate build.
+Published SDK archives remain available from [GitHub releases](https://github.com/postproject-org/postproject/releases).
+Build Manager 0.5.0 from this checkout, then install both wheels:
 
 ```sh
 python -m pip wheel --no-deps . --wheel-dir dist
-python -m pip install postproject-0.7.0a1-py3-none-any.whl \
-  dist/postproject_openassetio_manager-0.4.0-py3-none-any.whl
+python -m pip install postproject-0.8.0a1-py3-none-any.whl \
+  dist/postproject_openassetio_manager-0.5.0-py3-none-any.whl
 ```
 
 Pass the extracted native library as `library_path` when initializing the
