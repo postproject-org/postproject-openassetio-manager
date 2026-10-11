@@ -28,7 +28,6 @@ from postproject import (
     Production,
     RepresentationRef,
     ResourceRef,
-    RevisionContext,
     ToolIdentity,
 )
 
@@ -201,10 +200,9 @@ class PostProjectManagerInterface(ManagerInterface):
                         "published media needs LocatableContentTrait",
                     )
                 request = JobRequest(PUBLISH_KIND, (), target.id, representation_kind(hints))
-                with self._production.edit() as transaction:
-                    transaction.set_revision_context(
-                        self._revision_context(f"Prepare publish to {reference.toString()}")
-                    )
+                with self._production.edit(
+                    origin=self._origin(), message=f"Prepare publish to {reference.toString()}"
+                ) as transaction:
                     job_id = transaction.request_job(request)
                     transaction.commit()
                 successCallback(index, EntityReference(self._production.host_bindings[JobRef(job_id)]))
@@ -251,8 +249,9 @@ class PostProjectManagerInterface(ManagerInterface):
         now = time.time_ns() // 1_000
         # The request (without preflight), claim, representation, persisted
         # traits, activity, and completion become durable together or not at all.
-        with self._production.edit() as transaction:
-            transaction.set_revision_context(self._revision_context("Register published media"))
+        with self._production.edit(
+            origin=self._origin(), message="Register published media"
+        ) as transaction:
             if job_id is None:
                 job_id = transaction.request_job(JobRequest(PUBLISH_KIND, (), asset_id, kind))
             with transaction.claim_job_lease(job_id, tool, CLAIM_LEASE_DURATION) as lease:
@@ -305,13 +304,12 @@ class PostProjectManagerInterface(ManagerInterface):
             )
 
     @staticmethod
-    def _revision_context(message):
+    def _origin():
         try:
             manager_version = version("postproject-openassetio-manager")
         except PackageNotFoundError:
             manager_version = None
-        origin = OriginIdentity("PostProject OpenAssetIO Manager", manager_version, REPOSITORY_URI)
-        return RevisionContext(origin, message)
+        return OriginIdentity("PostProject OpenAssetIO Manager", manager_version, REPOSITORY_URI)
 
     def _lookup(self, reference):
         # Entities are read by identity on every call, so media committed by

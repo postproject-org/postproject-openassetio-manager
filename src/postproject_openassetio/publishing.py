@@ -131,23 +131,21 @@ def persisted_metadata(traits_data):
     trait_ids = sorted(traits_data.traitSet())
     yield (
         TRAIT_SET_PROPERTY,
-        MetadataList(tuple(MetadataString(item) for item in trait_ids)),
+        MetadataList(tuple(trait_ids)),
     )
     for trait_id in trait_ids:
         for key in sorted(traits_data.traitPropertyKeys(trait_id)):
             if (trait_id, key) in STRUCTURAL_PROPERTIES:
                 continue
             value = traits_data.getTraitProperty(trait_id, key)
-            yield MetadataProperty(trait_id, key), metadata_value(value)
+            yield (trait_id, key), metadata_value(value)
 
 
 def metadata_value(value):
-    """Convert one OpenAssetIO property value to a typed metadata value."""
+    """Preserve native scalars and convert OpenAssetIO floats explicitly."""
 
-    if isinstance(value, bool):
-        return MetadataBool(value)
-    if isinstance(value, int):
-        return MetadataI64(value)
+    if isinstance(value, (bool, int, str)):
+        return value
     if isinstance(value, float):
         if not math.isfinite(value):
             raise invalid_trait_set("trait properties must be finite numbers")
@@ -156,8 +154,6 @@ def metadata_value(value):
         if exponent >= 0:
             return MetadataDecimal(coefficient * 10**exponent, 0)
         return MetadataDecimal(coefficient, -exponent)
-    if isinstance(value, str):
-        return MetadataString(value)
     raise invalid_trait_set(f"unsupported trait property value: {value!r}")
 
 
