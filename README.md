@@ -21,10 +21,10 @@ specification: `ImageCollectionTrait`, `FrameRangedTrait`, and a templated
 `LocatableContentTrait` location such as `file:///shots/sh010.{frame:04d}.exr`
 (percent-encoded) with `isTemplated` set.
 
-## Install matching candidate packages
+## Install matching packages
 
-Use native and Python packages from the same PostProject 0.8 candidate build.
-Published SDK archives remain available from [GitHub releases](https://github.com/postproject-org/postproject/releases).
+Use native and Python packages from the same PostProject 0.8 build.
+Published SDK archives are available from [GitHub releases](https://github.com/postproject-org/postproject/releases).
 Build Manager 0.5.0 from this checkout, then install both wheels:
 
 ```sh
@@ -39,7 +39,7 @@ The older published Manager 0.2.0 wheel requires an earlier PostProject SDK.
 
 ## Development
 
-The development SDK returns UUID values with nominal ID hints. Dynamic targets
+The SDK returns UUID values with nominal ID hints. Dynamic targets
 use references such as `RepresentationRef(id)`; the Manager keeps those kinds
 when parsing host bindings. Use its matching Python wheel and native library.
 

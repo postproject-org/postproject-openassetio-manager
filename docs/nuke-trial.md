@@ -6,7 +6,7 @@ OpenAssetIO **1.0.0**, MediaCreation **1.0.0-alpha.12**. The library pins follow
 Its Python guide still lists older bundled versions; the runtime script checks
 the host/build and OpenAssetIO version and records available distribution data.
 
-Local preparation passed with the SDK 0.8 candidate (Python 0.8.0a1,
+Local preparation on 2026-10-11 passed with SDK 0.8 (Python 0.8.0a1,
 C ABI 52, schema 27), Manager 0.5.0, Python 3.11.15 and both
 OpenAssetIO/MediaCreation combinations 1.0.0/alpha.12 and 1.0.2/alpha.13.
 These are Manager tests, not Nuke execution. No Nuke binary was found in the
