@@ -15,7 +15,6 @@ from urllib.request import url2pathname
 
 from openassetio.errors import BatchElementError
 from postproject import (
-    FileSource,
     ImageSequenceSource,
     MetadataBool,
     MetadataDecimal,
@@ -97,7 +96,7 @@ def content_from_traits(traits_data):
         raise invalid_trait_set("LocatableContentTrait has no location")
     path = _file_path(location)
     if not content.getIsTemplated(False):
-        return FileSource(Path(path))
+        return Path(path)
     directory, name = os.path.split(path)
     match = _FRAME_TOKEN.fullmatch(name)
     if match is None:
