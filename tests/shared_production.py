@@ -26,12 +26,13 @@ production_path = Path(sys.argv[1]).resolve()
 library_path = Path(sys.argv[2]).resolve()
 
 with Production.open(production_path, library_path=library_path) as production:
-    render = next(
-        representation
-        for asset in production.assets
-        for representation in production.representations[asset.id]
-        if representation.kind is RepresentationKind.DERIVED
-    )
+    with production.read_session() as view:
+        render = next(
+            representation
+            for asset in view.assets()
+            for representation in production.representations[asset.id]
+            if representation.kind is RepresentationKind.DERIVED
+        )
     reference = production.host_bindings[RepresentationRef(render.id)]
 
 logger = ConsoleLogger()

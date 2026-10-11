@@ -23,14 +23,16 @@ specification: `ImageCollectionTrait`, `FrameRangedTrait`, and a templated
 
 ## Install matching packages
 
-Use native and Python packages from the same PostProject 0.8 build.
+Use native and Python packages from the same PostProject 0.9 development build.
+These sources require the unreleased SDK; use matching installed review artifacts
+or build it from source.
 Published SDK archives are available from [GitHub releases](https://github.com/postproject-org/postproject/releases).
-Build Manager 0.5.0 from this checkout, then install both wheels:
+Build Manager 0.6.0 from this checkout, then install both wheels:
 
 ```sh
 python -m pip wheel --no-deps . --wheel-dir dist
-python -m pip install postproject-0.8.0a1-py3-none-any.whl \
-  dist/postproject_openassetio_manager-0.5.0-py3-none-any.whl
+python -m pip install postproject-0.9.0a1-py3-none-any.whl \
+  dist/postproject_openassetio_manager-0.6.0-py3-none-any.whl
 ```
 
 Pass the extracted native library as `library_path` when initializing the
