@@ -12,6 +12,12 @@ OpenAssetIO/MediaCreation combinations 1.0.0/alpha.12 and 1.0.2/alpha.13.
 These are Manager tests, not Nuke execution. No Nuke binary was found in the
 inspected standard locations; licensed runtime acceptance is **not executed**.
 
+The 2026-10-12 preparation rerun passes all eight tests with SDK 0.9
+(Python 0.9.0a1, ABI 53, schema 27) and Manager 0.6.0, against both pinned
+1.0.0/alpha.12 and 1.0.2/alpha.13 packages in isolated Python 3.11 environments.
+A fresh real-PNG fixture is generated. This updates preparation evidence;
+licensed Nuke execution remains not executed.
+
 The slice is one Read node retaining a canonical PostProject entity reference.
 It checks explicit frame bounds, save/reopen, relocation, missing/ambiguous
 content, and a deassetized copy that reads with the Manager cleared. It does not
@@ -68,3 +74,14 @@ machine. Missing or ambiguous media must be resolved explicitly before export.
 License-independent checks run with `pytest -W error`; they validate actual
 Manager discovery/configuration, sequence traits, persisted references and root
 resolution. PNG generation follows [W3C PNG](https://www.w3.org/TR/png/).
+
+## Trial setup and support
+
+Use Manager 0.6.0 with SDK 0.9.0a1; the older published Manager does not support
+the redesigned SDK. Prepared local wheels have no public download claim.
+The Manager is Apache-2.0 and the SDK is MIT/Apache-2.0; OpenAssetIO and
+MediaCreation retain their bundled host licenses. Support for this experimental
+slice is through the [Manager repository's issues](https://github.com/postproject-org/postproject-openassetio-manager/issues).
+Keep Nuke's bundled packages and verify the native loader before the trial.
+The complete configuration, sequence fixture and acceptance/deassetization
+scripts above are the trial packet. No Write, color or worker support is claimed.
