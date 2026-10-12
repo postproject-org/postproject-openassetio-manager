@@ -18,6 +18,8 @@ from openassetio_mediacreation.traits.managementPolicy import ManagedTrait
 from postproject import (
     AssetRef,
     ContentStructureKind,
+    Edit,
+    InvalidArgumentError,
     JobRef,
     JobState,
     Production,
@@ -160,7 +162,9 @@ def test_publishes_exr_sequence_as_one_representation(
         assert activity.inputs == ()
         assert activity.tool.name == "PostProject Manager tests"
         (job,) = production.jobs(limit=10).items
-        assert JobRef(job.id) == production.host_bindings.parse(working.toString()).object
+        assert (
+            JobRef(job.id) == production.host_bindings.parse(working.toString()).object
+        )
         assert job.state == JobState.SUCCEEDED
         assert job.completion.representation_id == representation_id
         assert job.completion.activity_id == activity.id
@@ -217,9 +221,47 @@ def test_registers_existing_file_without_preflight(
         representation = production.representation(proxy_id)
         assert representation.asset_id == asset_id
         assert representation.kind == RepresentationKind.PROXY
-        assert production.jobs(limit=10).items[0].state == JobState.SUCCEEDED
+        assert production.jobs(limit=10).items == ()
+        assert production.dependency_set(proxy_id) is None
+        (activity,) = production.activities_producing[proxy_id]
+        assert activity.kind == "org.postproject:openassetio-publish"
+        assert (
+            activity.inputs == () and activity.tool.name == "PostProject Manager tests"
+        )
     resolved = manager.resolve(final, {ProxyTrait.kId}, ResolveAccess.kRead, context)
     assert ProxyTrait(resolved).getLabel() == "half"
+
+
+def test_failed_direct_registration_rolls_back_output_and_metadata(
+    tmp_path, native_library, production_with_shot, monkeypatch
+):
+    path, asset_id, reference = production_with_shot
+    with Production.open(path, library_path=native_library) as production:
+        before = production.latest_revision
+        original = production.representations[asset_id]
+    output = tmp_path / "output.mov"
+    output.write_bytes(b"completed host output")
+    manager = create_manager(
+        {"production_path": str(path), "library_path": native_library}
+    )
+    data = TraitsData({LocatableContentTrait.kId, ProxyTrait.kId})
+    LocatableContentTrait(data).setLocation(output.resolve().as_uri())
+
+    def reject_activity(*_args):
+        raise InvalidArgumentError(1, "activity rejected after output staging")
+
+    monkeypatch.setattr(Edit, "create_activity", reject_activity)
+    with pytest.raises(BatchElementException):
+        manager.register(
+            manager.createEntityReference(reference),
+            data,
+            PublishingAccess.kWrite,
+            manager.createContext(),
+        )
+    with Production.open(path, library_path=native_library) as production:
+        assert production.latest_revision == before
+        assert production.representations[asset_id] == original
+        assert production.jobs(limit=10).items == ()
 
 
 def test_rejects_unsupported_publishing(tmp_path, native_library, production_with_shot):

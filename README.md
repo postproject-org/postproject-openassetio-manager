@@ -71,8 +71,10 @@ production work:
   PostProject transaction: the representation, its resources and locator, the
   registered traits, the producing activity (attributed to the host's display
   name), and the job's success become durable together with one revision, or
-  not at all. `register` without `preflight` requests the job in the same
-  transaction. The final reference names the new representation.
+  not at all. `register` without `preflight` records the completed output,
+  traits and activity directly, without creating a job. The final reference
+  names the new representation; activity inputs never imply authored
+  dependencies inside that output.
 - A non-templated `file://` location becomes a single-file representation. A
   templated location with a `{frame}` or `{frame:0Nd}` variable and
   `FrameRangedTrait` becomes one image-sequence representation; absent frames

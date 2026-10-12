@@ -1,6 +1,7 @@
 """OpenAssetIO Manager backed by PostProject's public Python API."""
 
 import time
+from contextlib import nullcontext
 from datetime import timedelta
 from importlib.metadata import PackageNotFoundError, version
 from urllib.parse import quote
@@ -242,22 +243,33 @@ class PostProjectManagerInterface(ManagerInterface):
         content = content_from_traits(data)
         if isinstance(target, JobRef):
             job = self._production.job(target.id)
-            job_id, asset_id, kind = job.id, job.output_asset_id, job.output_representation_kind
+            job_id, asset_id, kind = (
+                job.id,
+                job.output_asset_id,
+                job.output_representation_kind,
+            )
         else:
             job_id, asset_id, kind = None, target.id, representation_kind(data)
         tool = ToolIdentity(hostSession.host().displayName())
         now = time.time_ns() // 1_000
-        # The request (without preflight), claim, representation, persisted
-        # traits, activity, and completion become durable together or not at all.
+        # Representation, traits and activity are atomic. A supplied working
+        # reference also completes its existing job in this same edit.
         with self._production.edit(
             origin=self._origin(), message="Register published media"
         ) as transaction:
-            if job_id is None:
-                job_id = transaction.request_job(JobRequest(PUBLISH_KIND, (), asset_id, kind))
-            with transaction.claim_job_lease(job_id, tool, CLAIM_LEASE_DURATION) as lease:
-                representation_id = transaction.add_representation(asset_id, kind, content)
+            capability = (
+                transaction.claim_job_lease(job_id, tool, CLAIM_LEASE_DURATION)
+                if job_id is not None
+                else nullcontext()
+            )
+            with capability as lease:
+                representation_id = transaction.add_representation(
+                    asset_id, kind, content
+                )
                 for metadata_property, value in persisted_metadata(data):
-                    transaction.add_metadata(RepresentationRef(representation_id), metadata_property, value)
+                    transaction.add_metadata(
+                        RepresentationRef(representation_id), metadata_property, value
+                    )
                 activity_id = transaction.create_activity(
                     ActivitySpec(
                         PUBLISH_KIND,
@@ -266,7 +278,10 @@ class PostProjectManagerInterface(ManagerInterface):
                         tool=tool,
                     )
                 )
-                transaction.complete_job_lease(lease, representation_id, activity_id)
+                if lease is not None:
+                    transaction.complete_job_lease(
+                        lease, representation_id, activity_id
+                    )
                 transaction.commit()
         return representation_id
 
