@@ -18,6 +18,10 @@ The 2026-10-12 preparation rerun passes all eight tests with SDK 0.9
 A fresh real-PNG fixture is generated. This updates preparation evidence;
 licensed Nuke execution remains not executed.
 
+On 2026-10-13, all nine Manager tests pass with SDK 0.9/ABI 55 and both
+dependency combinations above. Import fixtures retain the returned asset ID;
+direct registration needs no synthetic job. This remains preparation evidence.
+
 The slice is one Read node retaining a canonical PostProject entity reference.
 It checks explicit frame bounds, save/reopen, relocation, missing/ambiguous
 content, and a deassetized copy that reads with the Manager cleared. It does not
