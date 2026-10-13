@@ -77,7 +77,7 @@ def create_fixture(destination, library):
                     Fraction(24),
                 ),
                 "Three-frame PNG fixture",
-            )
+            ).asset_id
             transaction.commit()
         representation = production.representations[asset_id][0]
         reference = production.host_bindings[RepresentationRef(representation.id)]

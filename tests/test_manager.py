@@ -47,7 +47,7 @@ def test_resolves_file_representation(tmp_path, native_library):
     production_path = tmp_path / "production.pproj"
     with Production.create(production_path, library_path=native_library) as production:
         with production.edit() as transaction:
-            asset_id = transaction.import_media(media, "Camera A")
+            asset_id = transaction.import_media(media, "Camera A").asset_id
             transaction.commit()
         representation = production.representations[asset_id][0]
         reference = production.host_bindings[RepresentationRef(representation.id)]
@@ -76,7 +76,7 @@ def test_resolves_media_added_after_initialization(tmp_path, native_library):
     media.write_bytes(b"late media")
     with Production.open(production_path, library_path=native_library) as production:
         with production.edit() as transaction:
-            asset_id = transaction.import_media(media, "Late")
+            asset_id = transaction.import_media(media, "Late").asset_id
             transaction.commit()
         representation = production.representations[asset_id][0]
         references = [
@@ -108,7 +108,7 @@ def test_image_sequence_remains_one_representation(tmp_path, native_library):
                     sequence, SequenceNaming("shot.", ".exr", 4), 1001, 1003, 1, Fraction(24)
                 ),
                 "Shot",
-            )
+            ).asset_id
             transaction.commit()
         # The sequence is the asset's only original representation.
         (representation,) = production.representations[asset_id]

@@ -72,7 +72,7 @@ def production_with_shot(tmp_path, native_library):
     path = tmp_path / "publish.pproj"
     with Production.create(path, library_path=native_library) as production:
         with production.edit() as transaction:
-            asset_id = transaction.import_media(seed, "sh010")
+            asset_id = transaction.import_media(seed, "sh010").asset_id
             transaction.commit()
         reference = production.host_bindings[AssetRef(asset_id)]
     return path, asset_id, reference
