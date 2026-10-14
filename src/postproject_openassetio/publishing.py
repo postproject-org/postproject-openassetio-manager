@@ -16,12 +16,8 @@ from urllib.request import url2pathname
 from openassetio.errors import BatchElementError
 from postproject import (
     ImageSequenceSource,
-    MetadataBool,
     MetadataDecimal,
-    MetadataI64,
-    MetadataList,
     MetadataProperty,
-    MetadataString,
     RepresentationKind,
     SequenceNaming,
 )
@@ -130,7 +126,7 @@ def persisted_metadata(traits_data):
     trait_ids = sorted(traits_data.traitSet())
     yield (
         TRAIT_SET_PROPERTY,
-        MetadataList(tuple(trait_ids)),
+        (tuple(trait_ids)),
     )
     for trait_id in trait_ids:
         for key in sorted(traits_data.traitPropertyKeys(trait_id)):
@@ -159,8 +155,8 @@ def metadata_value(value):
 def property_value(value):
     """Convert persisted metadata back to an OpenAssetIO property value."""
 
-    if isinstance(value, MetadataBool | MetadataI64 | MetadataString):
-        return value.value
+    if isinstance(value, bool | int | str):
+        return value
     if isinstance(value, MetadataDecimal):
         return float(Decimal(value.coefficient).scaleb(-value.scale))
     return None
@@ -169,9 +165,9 @@ def property_value(value):
 def trait_set(value):
     """Return the persisted trait set of a ``TRAIT_SET_PROPERTY`` value."""
 
-    if not isinstance(value, MetadataList):
+    if not isinstance(value, tuple):
         return set()
-    return {item.value for item in value.values if isinstance(item, MetadataString)}
+    return {item for item in value if isinstance(item, str)}
 
 
 def _file_path(location):

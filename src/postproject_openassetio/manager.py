@@ -20,9 +20,6 @@ from openassetio_mediacreation.traits.managementPolicy import ManagedTrait
 from postproject import (
     ActivitySpec,
     AssetRef,
-    JobRef,
-    JobRequest,
-    JobState,
     OriginIdentity,
     PostProjectError,
     Production,
@@ -30,6 +27,7 @@ from postproject import (
     ResourceRef,
     ToolIdentity,
 )
+from postproject.jobs import JobRef, JobRequest, JobState
 
 from .publishing import (
     MANAGER_VOCABULARY,
@@ -112,7 +110,10 @@ class PostProjectManagerInterface(ManagerInterface):
                 ManagedTrait.imbueTo(result)
                 for trait_id in self._resolvable_traits() & set(requested):
                     result.addTrait(trait_id)
-            elif policyAccess == PolicyAccess.kWrite and LocatableContentTrait.kId in requested:
+            elif (
+                policyAccess == PolicyAccess.kWrite
+                and LocatableContentTrait.kId in requested
+            ):
                 # Registration persists every trait and property verbatim.
                 ManagedTrait.imbueTo(result)
                 result.addTraits(set(requested))
@@ -167,7 +168,9 @@ class PostProjectManagerInterface(ManagerInterface):
         errorCallback,
     ):
         if resolveAccess != ResolveAccess.kRead:
-            self._reject_batch(entityReferences, errorCallback, "Entities are read-only")
+            self._reject_batch(
+                entityReferences, errorCallback, "Entities are read-only"
+            )
             return
         for index, reference in enumerate(entityReferences):
             try:
@@ -199,13 +202,19 @@ class PostProjectManagerInterface(ManagerInterface):
                         BatchElementError.ErrorCode.kInvalidPreflightHint,
                         "published media needs LocatableContentTrait",
                     )
-                request = JobRequest(PUBLISH_KIND, (), target.id, representation_kind(hints))
+                request = JobRequest(
+                    PUBLISH_KIND, (), target.id, representation_kind(hints)
+                )
                 with self._production.edit(
-                    origin=self._origin(), message=f"Prepare publish to {reference.toString()}"
+                    origin=self._origin(),
+                    message=f"Prepare publish to {reference.toString()}",
                 ) as transaction:
                     job_id = transaction.request_job(request)
                     transaction.commit()
-                successCallback(index, EntityReference(self._production.host_bindings[JobRef(job_id)]))
+                successCallback(
+                    index,
+                    EntityReference(self._production.host_bindings[JobRef(job_id)]),
+                )
             except PublishError as error:
                 errorCallback(index, error.batch_error())
 
@@ -219,13 +228,20 @@ class PostProjectManagerInterface(ManagerInterface):
         successCallback,
         errorCallback,
     ):
-        for index, (reference, data) in enumerate(zip(entityReferences, entityTraitsDatas)):
+        for index, (reference, data) in enumerate(
+            zip(entityReferences, entityTraitsDatas)
+        ):
             try:
                 self._require_write(publishingAccess)
                 target = self._publish_target(reference.toString())
                 representation_id = self._register(target, data, hostSession)
                 successCallback(
-                    index, EntityReference(self._production.host_bindings[RepresentationRef(representation_id)])
+                    index,
+                    EntityReference(
+                        self._production.host_bindings[
+                            RepresentationRef(representation_id)
+                        ]
+                    ),
                 )
             except PublishError as error:
                 errorCallback(index, error.batch_error())
@@ -322,7 +338,9 @@ class PostProjectManagerInterface(ManagerInterface):
             manager_version = version("postproject-openassetio-manager")
         except PackageNotFoundError:
             manager_version = None
-        return OriginIdentity("PostProject OpenAssetIO Manager", manager_version, REPOSITORY_URI)
+        return OriginIdentity(
+            "PostProject OpenAssetIO Manager", manager_version, REPOSITORY_URI
+        )
 
     def _lookup(self, reference):
         # Entities are read by identity on every call, so media committed by
@@ -337,7 +355,9 @@ class PostProjectManagerInterface(ManagerInterface):
             if len(users.items) != 1:
                 raise ValueError("resource is not used by exactly one representation")
             representation = users.items[0]
-            resource = next(item for item in representation.resources if item.id == target.id)
+            resource = next(
+                item for item in representation.resources if item.id == target.id
+            )
             return representation, resource
         raise ValueError("object kind is not exposed as an OpenAssetIO media entity")
 
@@ -364,7 +384,9 @@ class PostProjectManagerInterface(ManagerInterface):
         if not hasattr(representation, "resources"):
             return {}
         persisted = {}
-        for assertion in self._production.metadata[RepresentationRef(representation.id)]:
+        for assertion in self._production.metadata[
+            RepresentationRef(representation.id)
+        ]:
             vocabulary = assertion.property.vocabulary
             if assertion.property == TRAIT_SET_PROPERTY:
                 for trait_id in trait_set(assertion.value):
@@ -372,7 +394,9 @@ class PostProjectManagerInterface(ManagerInterface):
             elif vocabulary != MANAGER_VOCABULARY:
                 value = property_value(assertion.value)
                 if value is not None:
-                    persisted.setdefault(vocabulary, {})[assertion.property.property] = value
+                    persisted.setdefault(vocabulary, {})[
+                        assertion.property.property
+                    ] = value
         return persisted
 
     def _traits_for(self, target):
@@ -394,8 +418,11 @@ class PostProjectManagerInterface(ManagerInterface):
                 for key, value in properties.items():
                     if (trait_id, key) not in STRUCTURAL_PROPERTIES:
                         data.setTraitProperty(trait_id, key, value)
-        if (DisplayNameTrait.kId in requested
-                and hasattr(target, "display_name") and target.display_name):
+        if (
+            DisplayNameTrait.kId in requested
+            and hasattr(target, "display_name")
+            and target.display_name
+        ):
             DisplayNameTrait(data).setName(target.display_name)
         representation = target[0] if isinstance(target, tuple) else target
         if hasattr(representation, "resources"):
@@ -427,14 +454,22 @@ class PostProjectManagerInterface(ManagerInterface):
         return data
 
     def _candidate_for(self, representation, target):
-        resource_id = target[1].id if isinstance(target, tuple) else representation.resources[0].id
+        resource_id = (
+            target[1].id
+            if isinstance(target, tuple)
+            else representation.resources[0].id
+        )
         resolutions = self._production.resolve(
             representation.asset_id, self._root_mappings
         )
         resolved = next(
-            result for result in resolutions if result.representation_id == representation.id
+            result
+            for result in resolutions
+            if result.representation_id == representation.id
         )
-        resource = next(item for item in resolved.resources if item.resource_id == resource_id)
+        resource = next(
+            item for item in resolved.resources if item.resource_id == resource_id
+        )
         if len(resource.candidates) != 1:
             raise ValueError("resource does not resolve to exactly one location")
         return resource.candidates[0]

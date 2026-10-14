@@ -20,12 +20,11 @@ from postproject import (
     ContentStructureKind,
     Edit,
     InvalidArgumentError,
-    JobRef,
-    JobState,
     Production,
     RepresentationKind,
     RepresentationRef,
 )
+from postproject.jobs import JobRef, JobState
 from test_manager import create_manager
 
 from postproject_openassetio.traits import (
@@ -251,7 +250,9 @@ def test_failed_direct_registration_rolls_back_output_and_metadata(
 
     def reject_metadata(edit, *args):
         add_metadata(edit, *args)
-        raise InvalidArgumentError(1, "trait rejected after output and metadata staging")
+        raise InvalidArgumentError(
+            1, "trait rejected after output and metadata staging"
+        )
 
     monkeypatch.setattr(Edit, "add_metadata", reject_metadata)
     with pytest.raises(BatchElementException):
