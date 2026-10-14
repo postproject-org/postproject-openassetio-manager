@@ -247,10 +247,13 @@ def test_failed_direct_registration_rolls_back_output_and_metadata(
     data = TraitsData({LocatableContentTrait.kId, ProxyTrait.kId})
     LocatableContentTrait(data).setLocation(output.resolve().as_uri())
 
-    def reject_activity(*_args):
-        raise InvalidArgumentError(1, "activity rejected after output staging")
+    add_metadata = Edit.add_metadata
 
-    monkeypatch.setattr(Edit, "create_activity", reject_activity)
+    def reject_metadata(edit, *args):
+        add_metadata(edit, *args)
+        raise InvalidArgumentError(1, "trait rejected after output and metadata staging")
+
+    monkeypatch.setattr(Edit, "add_metadata", reject_metadata)
     with pytest.raises(BatchElementException):
         manager.register(
             manager.createEntityReference(reference),
@@ -262,6 +265,7 @@ def test_failed_direct_registration_rolls_back_output_and_metadata(
         assert production.latest_revision == before
         assert production.representations[asset_id] == original
         assert production.jobs(limit=10).items == ()
+        assert production.activities == ()
 
 
 def test_rejects_unsupported_publishing(tmp_path, native_library, production_with_shot):

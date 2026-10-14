@@ -18,7 +18,6 @@ from openassetio.managerApi import ManagerInterface
 from openassetio.trait import TraitsData
 from openassetio_mediacreation.traits.managementPolicy import ManagedTrait
 from postproject import (
-    ActivityEdge,
     ActivitySpec,
     AssetRef,
     JobRef,
@@ -263,21 +262,20 @@ class PostProjectManagerInterface(ManagerInterface):
                 else nullcontext()
             )
             with capability as lease:
-                representation_id = transaction.add_representation(
-                    asset_id, kind, content
+                registered = transaction.register_outputs(
+                    ((asset_id, kind, content),),
+                    ActivitySpec(
+                        PUBLISH_KIND,
+                        finished_at_unix_micros=now,
+                        tool=tool,
+                    ),
                 )
+                representation_id = registered.outputs[0].representation_id
+                activity_id = registered.activity_id
                 for metadata_property, value in persisted_metadata(data):
                     transaction.add_metadata(
                         RepresentationRef(representation_id), metadata_property, value
                     )
-                activity_id = transaction.create_activity(
-                    ActivitySpec(
-                        PUBLISH_KIND,
-                        (ActivityEdge(representation_id),),
-                        finished_at_unix_micros=now,
-                        tool=tool,
-                    )
-                )
                 if lease is not None:
                     transaction.complete_job_lease(
                         lease, representation_id, activity_id
